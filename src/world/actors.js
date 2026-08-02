@@ -395,6 +395,8 @@ const EVA_COLORS = {
   '01': { body: 0x6b41ad, armor: 0x35bb64, trim: 0xf4a227, eye: 0xffe38a },
   '00': { body: 0x4283cf, armor: 0xd6e6f4, trim: 0xf4a227, eye: 0xff5a3c },
   '02': { body: 0xc02b22, armor: 0xe8552f, trim: 0xf4c027, eye: 0x7ef0ff },
+  // 仮設5号機/Mark.06 系 — 白い装甲に暗色の骨格
+  '06': { body: 0xdfe3ea, armor: 0x8f97a4, trim: 0x39414d, eye: 0xff4a2a },
 };
 
 // --- 姿勢 -------------------------------------------------------------------
@@ -472,6 +474,27 @@ export const POSES = {
     shoulderR: [-1.05, 0, -0.62], elbowR: [0.42, 0, 0],
     shoulderL: [-1.05, 0, 0.62], elbowL: [0.42, 0, 0],
     hipL: [-0.30, 0, 0], kneeL: [0.42, 0, 0], hipR: [0.30, 0, 0], kneeR: [0.42, 0, 0],
+  },
+  /** 獣化第2形態 — 四つ這い (弐号機 ザ・ビースト) */
+  beast: {
+    hipsY: 0.30, hips: [1.12, 0, 0], chest: [-0.30, 0, 0], head: [-0.72, 0, 0],
+    shoulderR: [-0.92, 0, -0.22], elbowR: [0.30, 0, 0],
+    shoulderL: [-0.92, 0, 0.22], elbowL: [0.30, 0, 0],
+    hipL: [-0.62, 0, 0], kneeL: [1.15, 0, 0], hipR: [-0.48, 0, 0], kneeR: [1.05, 0, 0],
+  },
+  /** 覚醒 — 両腕を大きく開き、天を仰ぐ */
+  awaken: {
+    hipsY: 0.53, hips: [-0.10, 0, 0], chest: [-0.26, 0, 0], head: [-0.58, 0, 0],
+    shoulderR: [-0.18, 0, 1.38], elbowR: [0.08, 0, 0],
+    shoulderL: [-0.18, 0, -1.38], elbowL: [0.08, 0, 0],
+    hipL: [-0.02, 0, 0], kneeL: [0.04, 0, 0], hipR: [0.02, 0, 0], kneeR: [0.04, 0, 0],
+  },
+  /** 貫かれて静止 — 収束後の磔 */
+  pinned: {
+    hipsY: 0.51, hips: [0.06, 0, 0], chest: [0.10, 0, 0], head: [0.30, 0, 0],
+    shoulderR: [-0.10, 0, 1.18], elbowR: [0.22, 0, 0],
+    shoulderL: [-0.10, 0, -1.18], elbowL: [0.22, 0, 0],
+    hipL: [-0.10, 0, 0], kneeL: [0.16, 0, 0], hipR: [0.08, 0, 0], kneeR: [0.14, 0, 0],
   },
   /** 捕食 — 両腕で掴み、上体を前へ */
   devour: {

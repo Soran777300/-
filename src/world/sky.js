@@ -19,6 +19,8 @@ uniform vec3  uDawn;
 uniform float uDawnMix;
 uniform vec3  uDawnDir;
 uniform float uTime;
+uniform float uImpact;   // ニアサードインパクト — 空が赤く灼ける
+uniform vec3  uImpactCol;
 varying vec3 vDir;
 
 float hash(vec2 p) {
@@ -47,6 +49,14 @@ void main() {
   col = mix(col, uDawn, dawn * uDawnMix);
   col += uDawn * uDawnMix * 0.10 * (1.0 - smoothstep(0.0, 0.5, abs(d.y - 0.06)));
 
+  // ニアサードインパクト — 天頂から赤い光が満ちる
+  if (uImpact > 0.001) {
+    float band = 0.35 + 0.65 * pow(clamp(d.y, 0.0, 1.0), 0.6);
+    float pulse = 0.85 + 0.15 * sin(uTime * 1.6 + d.y * 6.0);
+    col = mix(col, uImpactCol * band * pulse, uImpact);
+    col += uImpactCol * uImpact * 0.16 * (1.0 - smoothstep(0.0, 0.42, abs(d.y - 0.02)));
+  }
+
   gl_FragColor = vec4(col, 1.0);
 }
 `;
@@ -61,6 +71,8 @@ export function createSky() {
       uDawnMix: { value: 0 },
       uDawnDir: { value: new THREE.Vector3(0.85, 0.16, -0.5).normalize() },
       uTime: { value: 0 },
+      uImpact: { value: 0 },
+      uImpactCol: { value: new THREE.Color(0xd8202c) },
     },
     vertexShader: vert,
     fragmentShader: frag,

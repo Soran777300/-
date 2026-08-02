@@ -16,14 +16,17 @@ import {
   createEva, createPalletRifle, createN2Mine, createBerserkAura, createBlastPool,
 } from './world/actors.js';
 import { createZeruel } from './world/zeruel.js';
-import { createDogma, DECK_Y, SHAFT_BOTTOM_Y, CITY, depthM } from './world/dogma.js';
+import {
+  createHalo, createLightPillar, createGufDoors, createLCLFlood, createSpear, createGiant,
+} from './world/impact.js';
+import { createDogma, DECK_Y, SHAFT_BOTTOM_Y, GROUND_Y, CITY, depthM } from './world/dogma.js';
 import { terrainY, surfaceY, M_PER_UNIT, VE } from './world/geo.js';
 import { CameraDirector } from './director/camera.js';
 import {
-  CHAPTERS, CAMERA_KEYS, MARKERS, ARROWS, DURATION, T0, ANGEL_H, EVA01_STAND,
-  EVA02_TRACK, EVA00_TRACK,
+  CHAPTERS, CAMERA_KEYS, MARKERS, ARROWS, DURATION, T0, ANGEL_H, EVA01_STAND, GIANT_H,
+  EVA02_TRACK, EVA00_TRACK, MARK06_TRACK,
   applyTracks, buildEvents, chapterAt, captionAt, angelAt,
-  reservePower, bulkheads, atField, forces, penetrationM,
+  reservePower, bulkheads, atField, forces, penetrationM, impactProgress,
 } from './director/script-zeruel.js';
 import { createHUD, createTitleCard } from './ui/hud.js';
 import { QUALITY, IS_TOUCH } from './quality.js';
@@ -37,8 +40,8 @@ const DEPTH_MAX = depthM(SHAFT_BOTTOM_Y);
 const fmtM = (v) => Math.round(v).toLocaleString('en-US');
 
 const HUD_CONFIG = {
-  opName: '第10使徒 迎撃戦',
-  opEn: 'THE 10TH ANGEL — ASSAULT ON NERV HQ',
+  opName: '第10の使徒 迎撃戦',
+  opEn: 'THE 10TH ANGEL — ASSAULT ON NERV HQ / NEAR THIRD IMPACT',
   code: 'CODE No.1670055',
   clockLabel: 'PENETRATION TIME',
   plug: {
@@ -53,22 +56,33 @@ const HUD_CONFIG = {
   gauge: {
     ja: '侵攻深度',
     en: 'PENETRATION DEPTH',
-    text: (s) => fmtM(s.depth),
     unit: 'm',
-    fill: (s) => (s.depth / DEPTH_MAX) * 100,
+    // 覚醒以降は「事象進行度」に切り替わる
+    head: (s) =>
+      s.t >= 374
+        ? ['事象進行度', 'NEAR THIRD IMPACT', '%']
+        : ['侵攻深度', 'PENETRATION DEPTH', 'm'],
+    text: (s) => (s.t >= 374 ? s.impact.toFixed(0) : fmtM(s.depth)),
+    fill: (s) => (s.t >= 374 ? s.impact : (s.depth / DEPTH_MAX) * 100),
     subL: 'SURFACE 0 m',
     subR: `C.DOGMA ${fmtM(DEPTH_MAX)} m`,
   },
   reticle: 'TARGET LOCK<br>PATTERN BLUE',
   dead: (s) => s.at <= 0.5,
   targetRows: [
-    { dt: '目標', dd: () => '第10使徒 ゼルエル' },
-    { dt: 'パターン', dd: (s, dead) => (dead ? '反応 消失' : '青 / BLUE'), warn: (s, dead) => dead },
-    { dt: 'ATフィールド', dd: (s, dead) => (dead ? '0 %' : s.at.toFixed(0) + ' %') },
+    { dt: '目標', dd: (s) => (s.t >= 374 ? '初号機 覚醒体' : '第10の使徒'), warn: (s) => s.t >= 374 },
+    {
+      dt: 'パターン',
+      dd: (s, dead) => (s.t >= 374 ? '青 / 初号機' : dead ? '反応 消失' : '青 / BLUE'),
+      warn: (s, dead) => dead && s.t < 374,
+    },
+    { dt: 'ATフィールド', dd: (s, dead) => (s.t >= 374 ? '測定不能' : dead ? '0 %' : s.at.toFixed(0) + ' %') },
     {
       dt: '目標位置',
       dd: (s, dead) =>
-        dead ? '—' : s.depth > 1 ? '地下 ' + fmtM(s.depth) + ' m' : '高度 ' + fmtM(s.altitude) + ' m',
+        s.t >= 374
+          ? (s.evaAlt >= 0 ? '高度 ' + fmtM(s.evaAlt) + ' m' : '地下 ' + fmtM(-s.evaAlt) + ' m')
+          : dead ? '—' : s.depth > 1 ? '地下 ' + fmtM(s.depth) + ' m' : '高度 ' + fmtM(s.altitude) + ' m',
     },
     { dt: '本部まで', dd: (s, dead) => (dead ? '—' : fmtM(s.range) + ' m') },
     { dt: '隔壁', dd: (s) => `突破 ${Math.floor(s.bulk)} / 17`, warn: (s) => s.bulk >= 7 },
@@ -211,6 +225,25 @@ scene.add(eva01);
 const aura = createBerserkAura(0.26);
 scene.add(aura);
 
+// --- 覚醒 / ニアサードインパクト / 収束 --------------------------------------
+const halo = createHalo(0.42);
+scene.add(halo);
+const pillar = createLightPillar(0.34, 240);
+scene.add(pillar);
+const guf = createGufDoors(96);
+guf.position.set(CITY.x, 96, CITY.z);
+scene.add(guf);
+const lcl = createLCLFlood(150);
+lcl.position.set(CITY.x, GROUND_Y + 0.12, CITY.z);
+scene.add(lcl);
+const giant = createGiant(createEva, GIANT_H);
+scene.add(giant);
+const mark06 = createEva('06', { x: CITY.x + 30, y: 150, z: CITY.z + 30 }, 0, 'guard');
+mark06.visible = false;
+scene.add(mark06);
+const spear = createSpear(2.6);
+scene.add(spear);
+
 const blasts = createBlastPool(QUALITY.blastCount);
 scene.add(blasts);
 
@@ -248,6 +281,7 @@ const _apex = new THREE.Vector3(CITY.x, DECK_Y, CITY.z);
 
 const ctx = {
   markers, arrows, angel, eva01, eva00, eva02, rifle, mine, aura,
+  halo, pillar, guf, lcl, giant, mark06, spear,
   dogma, director, camera, blasts,
   terrainU: terrain.uniforms,
   waterU: water.userData.uniforms[0],
@@ -380,7 +414,13 @@ function updateWorld(dt, t) {
   eva01.userData.update(dt, wall);
   eva00.userData.update(dt, wall);
   eva02.userData.update(dt, wall);
+  mark06.userData.update(dt, wall);
   aura.userData.update(dt, wall);
+  halo.userData.update(dt, wall);
+  pillar.userData.update(dt, wall);
+  guf.userData.update(dt, wall);
+  lcl.userData.update(dt, wall);
+  giant.userData.update(dt, wall);
   dogma.userData.update(dt, wall);
   blasts.userData.update(dt);
 
@@ -442,8 +482,10 @@ function render() {
       reserve: reservePower(time),
       at: atField(time),
       depth,
+      impact: impactProgress(time),
       bulk: bulkheads(time),
       forces: forces(time),
+      evaAlt: ((eva01.position.y - terrainY(eva01.position.x, eva01.position.z)) / VE) * M_PER_UNIT,
       range: angel.position.distanceTo(_apex) * M_PER_UNIT,
       altitude: Math.max(0,
         ((angel.position.y - ANGEL_H * 0.5 - terrainY(angel.position.x, angel.position.z)) / VE) * M_PER_UNIT),
@@ -476,9 +518,9 @@ createTitleCard(
   {
     menu: 'Menu 2-36',
     code: 'Code No.1670055',
-    title: '第10使徒 迎撃戦',
-    sub: 'ネルフ本部 侵攻 — 3D 俯瞰 作戦記録',
-    note: 'THE 10TH ANGEL "ZERUEL" — ASSAULT ON NERV HQ / 3D OVERHEAD RECONSTRUCTION',
+    title: '第10の使徒 迎撃戦',
+    sub: 'ネルフ本部 侵攻 〜 ニアサードインパクト収束',
+    note: 'THE 10TH ANGEL — ASSAULT ON NERV HQ / NEAR THIRD IMPACT / 3D OVERHEAD RECONSTRUCTION',
     back: './index.html',
   }
 );

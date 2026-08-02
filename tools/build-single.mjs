@@ -17,7 +17,7 @@ const TARGETS = [
   {
     entry: 'src/main-zeruel.js',
     out: 'dist/zeruel.html',
-    title: '第10使徒 迎撃戦 — ネルフ本部 侵攻 / 3D 俯瞰 作戦記録',
+    title: '第10の使徒 迎撃戦 — ネルフ本部 侵攻 / ニアサードインパクト収束',
   },
   {
     entry: 'src/main.js',

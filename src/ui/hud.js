@@ -211,6 +211,9 @@ export function createHUD(opts) {
     <div class="gauge-sub"><span>${cfg.gauge.subL}</span><span>${cfg.gauge.subR}</span></div>`;
   const powerVal = powerPanel.querySelector('.v');
   const powerFill = powerPanel.querySelector('.gauge-fill');
+  const gaugeJa = powerPanel.querySelector('.head .ja');
+  const gaugeEn = powerPanel.querySelector('.head .en');
+  const gaugeUnit = powerPanel.querySelector('.gauge-big small');
 
   const orgPanel = el('div', 'panel');
   orgPanel.innerHTML = `<div class="head"><span class="ja">関係機関</span><span class="en">PARTICIPATING AGENCIES</span></div>`;
@@ -447,7 +450,13 @@ export function createHUD(opts) {
       segEls.forEach((e, i) => e.classList.toggle('off', r < SEGS[i].on));
       sysBoxes.forEach((b, i) => b.classList.toggle('off', r < sysDefs[i].off));
 
-      // 主ゲージ
+      // 主ゲージ (作戦の段階で計器そのものが切り替わることがある)
+      if (cfg.gauge.head) {
+        const [gja, gen, gunit] = cfg.gauge.head(s);
+        if (gaugeJa.textContent !== gja) gaugeJa.textContent = gja;
+        if (gaugeEn.textContent !== gen) gaugeEn.textContent = gen;
+        if (gunit && gaugeUnit.textContent !== gunit) gaugeUnit.textContent = gunit;
+      }
       powerVal.textContent = cfg.gauge.text(s);
       powerFill.style.width = Math.min(100, Math.max(0, cfg.gauge.fill(s))) + '%';
 
