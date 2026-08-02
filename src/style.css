@@ -1,0 +1,887 @@
+/* =========================================================================
+   ヤシマ作戦 3D 俯瞰デモ — NERV 戦術表示 UI
+   配色・罫線・書体は特務機関ネルフ端末表示の意匠に準拠
+   ========================================================================= */
+
+:root {
+  --hud-bg: #03060c;
+  --orange: #ff7a1a;
+  --orange-dim: #b0500f;
+  --amber: #ffb14a;
+  --cyan: #2fd8ff;
+  --cyan-dim: #12768f;
+  --green: #48e08a;
+  --yellow: #ffd166;
+  --red: #ff2d55;
+  --white: #e8eef5;
+
+  --font-title: "Matisse", "MatisseEB", "ヒラギノ明朝 ProN W6", "Hiragino Mincho ProN",
+    "游明朝", "Yu Mincho", "YuMincho", "MS PMincho", "Noto Serif JP", "Songti SC", serif;
+  --font-ui: "Helvetica Neue", "Arial Narrow", Arial, "ヒラギノ角ゴ ProN",
+    "Hiragino Kaku Gothic ProN", "游ゴシック", "Yu Gothic", "Noto Sans JP", "Meiryo", sans-serif;
+  --font-num: "DIN Alternate", "Roboto Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: #000;
+  overflow: hidden;
+  color: var(--orange);
+  font-family: var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+}
+
+canvas { display: block; }
+
+#app { position: fixed; inset: 0; }
+
+/* ---------------------------------------------------------------- 共通意匠 */
+
+.hatch {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    rgba(255, 122, 26, 0.10) 0 1px,
+    transparent 1px 9px
+  );
+}
+
+.ticked {
+  position: relative;
+  border: 1px solid rgba(255, 122, 26, 0.55);
+}
+.ticked::before,
+.ticked::after {
+  content: "";
+  position: absolute;
+  width: 12px; height: 12px;
+  border: 2px solid var(--orange);
+  pointer-events: none;
+}
+.ticked::before { left: -1px; top: -1px; border-right: none; border-bottom: none; }
+.ticked::after  { right: -1px; bottom: -1px; border-left: none; border-top: none; }
+
+.label {
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--orange);
+  opacity: 0.85;
+}
+
+.jp { font-family: var(--font-ui); font-weight: 700; }
+
+/* ------------------------------------------------------------------- HUD 骨格 */
+
+#hud {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
+  font-size: 12px;
+  transition: opacity 0.35s ease;
+}
+#hud.hidden { opacity: 0; }
+
+/* 走査線 + 周辺減光 */
+#hud::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-linear-gradient(to bottom, rgba(0,0,0,0.16) 0 1px, transparent 1px 3px),
+    radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,0.55) 100%);
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+
+/* 画面四隅のブラケット */
+.frame-corner {
+  position: absolute;
+  width: 46px; height: 46px;
+  border: 2px solid var(--orange);
+  opacity: 0.9;
+}
+.fc-tl { left: 14px; top: 14px; border-right: none; border-bottom: none; }
+.fc-tr { right: 14px; top: 14px; border-left: none; border-bottom: none; }
+.fc-bl { left: 14px; bottom: 14px; border-right: none; border-top: none; }
+.fc-br { right: 14px; bottom: 14px; border-left: none; border-top: none; }
+
+/* -------------------------------------------------------------------- 上段 */
+
+.hud-top {
+  position: absolute;
+  left: 34px; right: 34px; top: 26px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--orange);
+}
+.brand svg { display: block; filter: drop-shadow(0 0 6px rgba(255,122,26,0.4)); }
+.brand-text .jp-name {
+  font-family: var(--font-title);
+  font-size: 17px;
+  font-weight: 900;
+  letter-spacing: 0.22em;
+  line-height: 1.1;
+}
+.brand-text .en-name {
+  font-size: 9px;
+  letter-spacing: 0.4em;
+  opacity: 0.75;
+  margin-top: 3px;
+}
+
+.mission {
+  text-align: center;
+  min-width: 300px;
+}
+.mission .op-name {
+  font-family: var(--font-title);
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: 0.3em;
+  line-height: 1;
+  text-shadow: 0 0 14px rgba(255, 122, 26, 0.45);
+}
+.mission .op-en {
+  font-size: 9.5px;
+  letter-spacing: 0.42em;
+  opacity: 0.8;
+  margin-top: 5px;
+}
+.mission .chapter-bar {
+  margin-top: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 12px;
+  border: 1px solid var(--orange);
+  background: rgba(255, 122, 26, 0.08);
+}
+.mission .chapter-no { font-family: var(--font-num); font-size: 11px; opacity: 0.8; }
+.mission .chapter-ja { font-family: var(--font-title); font-weight: 900; font-size: 14px; letter-spacing: 0.2em; }
+.mission .chapter-en { font-size: 8.5px; letter-spacing: 0.28em; opacity: 0.7; }
+
+.sysinfo {
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+.sysinfo .row { font-family: var(--font-num); font-size: 10px; letter-spacing: 0.14em; opacity: 0.85; }
+.badge-23d {
+  width: 54px; height: 40px;
+  border: 2px solid var(--orange);
+  position: relative;
+  display: grid;
+  place-items: center;
+  background:
+    linear-gradient(to top right, transparent calc(50% - 1px), var(--orange) calc(50% - 1px), var(--orange) calc(50% + 1px), transparent calc(50% + 1px));
+}
+.badge-23d span {
+  position: absolute;
+  font-family: var(--font-num);
+  font-weight: 700;
+  font-size: 12px;
+}
+.badge-23d .b2d { left: 5px; top: 2px; opacity: 0.45; }
+.badge-23d .b3d { right: 5px; bottom: 2px; color: var(--amber); }
+
+/* ------------------------------------------------------------------ 左パネル */
+/* 「RESERVE ENERGY REMAINING / EVA-01 : ENTRY PLUG」 の再現 */
+
+.panel-eva {
+  position: absolute;
+  left: 34px; top: 132px;
+  width: 362px;
+  padding: 10px 10px 8px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 122, 26, 0.4);
+  transition: opacity 0.5s ease;
+}
+.eva-graph {
+  position: relative;
+  height: 176px;
+  margin-left: 26px;
+}
+.eva-axis {
+  position: absolute;
+  left: -26px; top: 0; bottom: 0;
+  width: 26px;
+}
+.eva-axis .tick {
+  position: absolute;
+  right: 0;
+  width: 10px;
+  border-top: 1px solid rgba(255, 122, 26, 0.7);
+}
+.eva-axis .tick.major { width: 16px; border-top-color: var(--orange); }
+.eva-axis .tick-label {
+  position: absolute;
+  right: 18px;
+  font-family: var(--font-num);
+  font-size: 10px;
+  color: var(--orange);
+  transform: translateY(-50%);
+  white-space: nowrap;
+}
+
+.sysbox {
+  position: absolute;
+  left: 0;
+  height: 21px;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  border: 2px solid var(--orange);
+  background: rgba(255, 122, 26, 0.14);
+  color: var(--amber);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  transition: opacity 0.4s ease, border-color 0.4s ease, color 0.4s ease;
+}
+.sysbox.off { opacity: 0.22; border-color: var(--orange-dim); color: var(--orange-dim); }
+.sysbox .chip {
+  position: absolute;
+  right: -13px;
+  width: 9px; height: 15px;
+  border: 2px solid var(--orange);
+  background: rgba(0,0,0,0.7);
+}
+
+.seg {
+  position: absolute;
+  height: 15px;
+  border: 2px solid var(--orange);
+  background: rgba(255, 122, 26, 0.22);
+  transition: opacity 0.3s ease, background 0.3s ease;
+}
+.seg .seg-label {
+  position: absolute;
+  left: 1px; top: -13px;
+  font-family: var(--font-num);
+  font-size: 9px;
+  color: var(--amber);
+  letter-spacing: 0.06em;
+}
+.seg.off { opacity: 0.18; background: transparent; }
+
+.border-line {
+  position: absolute;
+  left: -26px; right: 0;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.border-line .rule { position: absolute; left: 0; right: 0; top: 50%; border-top: 2px solid var(--cyan); }
+.border-line .cap {
+  position: relative;
+  padding: 1px 12px;
+  border: 2px solid var(--cyan);
+  background: #02121a;
+  color: var(--cyan);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+}
+
+.reserve-bar {
+  position: absolute;
+  left: -26px;
+  bottom: -22px;
+  height: 13px;
+  background: linear-gradient(to right, #7ff0ff, #17b6d8);
+  box-shadow: 0 0 10px rgba(47, 216, 255, 0.6);
+  transition: width 0.25s linear, background 0.4s;
+}
+.reserve-bar.low { background: linear-gradient(to right, #ffb14a, #ff3b1f); box-shadow: 0 0 10px rgba(255,80,30,0.7); }
+
+.eva-caption {
+  margin-top: 30px;
+  display: inline-block;
+  border: 2px solid var(--orange);
+  background: rgba(255,122,26,0.12);
+  padding: 3px 10px;
+  color: var(--amber);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  line-height: 1.45;
+}
+.eva-caption .val { font-family: var(--font-num); color: #fff; }
+
+/* ------------------------------------------------------------------ 右パネル */
+
+.hud-right {
+  position: absolute;
+  right: 34px; top: 132px;
+  width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.panel {
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 122, 26, 0.4);
+  padding: 9px 11px 11px;
+}
+.panel > .head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255,122,26,0.35);
+  padding-bottom: 5px;
+  margin-bottom: 8px;
+}
+.panel > .head .ja { font-family: var(--font-title); font-weight: 900; font-size: 13px; letter-spacing: 0.16em; }
+.panel > .head .en { font-size: 8.5px; letter-spacing: 0.24em; opacity: 0.7; }
+
+.gauge-big {
+  font-family: var(--font-num);
+  font-size: 40px;
+  line-height: 1;
+  color: var(--amber);
+  text-align: right;
+  letter-spacing: 0.02em;
+  text-shadow: 0 0 16px rgba(255,177,74,0.4);
+}
+.gauge-big small { font-size: 14px; opacity: 0.7; margin-left: 4px; }
+.gauge-track {
+  margin-top: 7px;
+  height: 10px;
+  border: 1px solid rgba(255,122,26,0.6);
+  padding: 1px;
+}
+.gauge-fill {
+  height: 100%;
+  background: repeating-linear-gradient(90deg, var(--orange) 0 4px, rgba(255,122,26,0.35) 4px 6px);
+  transition: width 0.2s linear;
+}
+
+.org-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 0;
+  border-bottom: 1px dotted rgba(255,122,26,0.18);
+  transition: opacity 0.4s ease;
+}
+.org-row.idle { opacity: 0.3; }
+.org-row .name { font-size: 11px; font-weight: 700; letter-spacing: 0.04em; }
+.org-row .code { font-family: var(--font-num); font-size: 8.5px; opacity: 0.6; letter-spacing: 0.1em; }
+.org-row .state {
+  font-family: var(--font-num);
+  font-size: 10px;
+  padding: 1px 6px;
+  border: 1px solid currentColor;
+  white-space: nowrap;
+}
+.st-standby { color: var(--orange-dim); }
+.st-active  { color: var(--green); }
+.st-work    { color: var(--cyan); }
+.st-done    { color: var(--amber); }
+
+/* -------------------------------------------------------------- 左下 目標情報 */
+
+.panel-target {
+  position: absolute;
+  left: 34px; bottom: 132px;
+  width: 362px;
+}
+.kv {
+  display: grid;
+  grid-template-columns: 92px 1fr;
+  gap: 2px 8px;
+  font-size: 11px;
+}
+.kv dt { opacity: 0.7; letter-spacing: 0.08em; }
+.kv dd { margin: 0; font-family: var(--font-num); color: var(--amber); letter-spacing: 0.04em; }
+.kv dd.warn { color: var(--red); }
+
+/* ------------------------------------------------------------------- ログ */
+
+.hud-log {
+  position: absolute;
+  right: 34px; bottom: 132px;
+  width: 300px;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 3px;
+  font-family: var(--font-num);
+  font-size: 10px;
+  letter-spacing: 0.03em;
+}
+.hud-log .line {
+  padding: 2px 6px;
+  border-left: 3px solid var(--orange);
+  background: rgba(255,122,26,0.07);
+  color: var(--amber);
+  animation: logIn 0.3s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@keyframes logIn { from { opacity: 0; transform: translateX(14px); } to { opacity: 1; transform: none; } }
+
+/* ------------------------------------------------------------------ 時刻表示 */
+
+.hud-clock {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 118px;
+  text-align: center;
+}
+.hud-clock .t {
+  font-family: var(--font-num);
+  font-size: 30px;
+  letter-spacing: 0.12em;
+  color: var(--amber);
+  text-shadow: 0 0 14px rgba(255,177,74,0.35);
+}
+.hud-clock .t.minus { color: var(--cyan); text-shadow: 0 0 14px rgba(47,216,255,0.4); }
+.hud-clock .lbl { font-size: 9px; letter-spacing: 0.36em; opacity: 0.7; margin-top: 2px; }
+.hud-clock.count .t { font-size: 52px; color: #fff; text-shadow: 0 0 26px rgba(255,90,30,0.8); }
+
+/* ------------------------------------------------------------------- 字幕 */
+
+.hud-caption {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 176px;
+  max-width: min(72vw, 1000px);
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+.hud-caption.on { opacity: 1; }
+.hud-caption .ja {
+  font-family: var(--font-title);
+  font-weight: 900;
+  font-size: clamp(19px, 2.4vw, 34px);
+  letter-spacing: 0.14em;
+  line-height: 1.35;
+  color: #fff;
+  text-shadow: 0 2px 0 #000, 0 0 22px rgba(0,0,0,0.95), 0 0 44px rgba(0,0,0,0.8);
+}
+.hud-caption .en {
+  margin-top: 7px;
+  font-size: 10.5px;
+  letter-spacing: 0.34em;
+  color: var(--amber);
+  text-shadow: 0 0 10px #000;
+}
+
+/* ------------------------------------------------------------------ 警報 */
+
+.hud-alert {
+  position: absolute;
+  left: 50%;
+  top: 118px;
+  transform: translateX(-50%);
+  padding: 5px 26px;
+  border: 3px solid var(--red);
+  background: rgba(40, 0, 6, 0.85);
+  color: #fff;
+  font-family: var(--font-title);
+  font-weight: 900;
+  font-size: 22px;
+  letter-spacing: 0.3em;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.hud-alert.on { opacity: 1; animation: alertBlink 0.55s steps(1) infinite; }
+@keyframes alertBlink { 50% { background: rgba(120, 0, 16, 0.9); border-color: #fff; } }
+
+/* ------------------------------------------------------------------ 発光 */
+
+#flash {
+  position: fixed;
+  inset: 0;
+  background: #fff;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 20;
+}
+
+/* ---------------------------------------------------------------- 照準枠 */
+
+#reticle {
+  position: absolute;
+  width: 190px; height: 190px;
+  margin-left: -95px; margin-top: -95px;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+#reticle.on { opacity: 1; }
+#reticle .rlabel {
+  position: absolute;
+  left: 100%; top: 50%;
+  transform: translateY(-50%);
+  margin-left: 10px;
+  font-family: var(--font-num);
+  font-size: 10px;
+  color: var(--red);
+  white-space: nowrap;
+  letter-spacing: 0.12em;
+  text-shadow: 0 0 8px #000;
+}
+
+/* ---------------------------------------------------------------- 操作卓 */
+
+.hud-transport {
+  position: absolute;
+  left: 34px; right: 34px; bottom: 30px;
+  pointer-events: auto;
+  background: rgba(0,0,0,0.6);
+  border: 1px solid rgba(255,122,26,0.4);
+  padding: 8px 12px 10px;
+}
+.tl-track {
+  position: relative;
+  height: 26px;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(255,122,26,0.3);
+}
+.tl-bar {
+  position: absolute;
+  left: 0; right: 0; top: 15px;
+  height: 5px;
+  background: rgba(255,122,26,0.16);
+}
+.tl-fill {
+  position: absolute;
+  left: 0; top: 15px;
+  height: 5px;
+  background: linear-gradient(90deg, var(--orange-dim), var(--amber));
+}
+.tl-head {
+  position: absolute;
+  top: 8px;
+  width: 3px; height: 19px;
+  background: #fff;
+  box-shadow: 0 0 8px rgba(255,255,255,0.8);
+  transform: translateX(-1px);
+}
+.tl-chapter {
+  position: absolute;
+  top: 0;
+  padding-left: 4px;
+  border-left: 1px solid rgba(255,122,26,0.7);
+  height: 26px;
+  font-size: 8.5px;
+  letter-spacing: 0.1em;
+  color: var(--orange);
+  white-space: nowrap;
+  opacity: 0.75;
+}
+.tl-chapter.cur { color: var(--amber); opacity: 1; border-left-color: var(--amber); }
+
+.tl-controls {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.btn {
+  pointer-events: auto;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: var(--orange);
+  background: rgba(255,122,26,0.08);
+  border: 1px solid var(--orange);
+  padding: 4px 11px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.btn:hover { background: rgba(255,122,26,0.25); color: var(--amber); }
+.btn.on { background: var(--orange); color: #060606; font-weight: 700; }
+.tl-time {
+  font-family: var(--font-num);
+  font-size: 12px;
+  color: var(--amber);
+  margin-left: auto;
+  letter-spacing: 0.08em;
+}
+.tl-hint { font-size: 9.5px; opacity: 0.55; letter-spacing: 0.08em; }
+
+/* -------------------------------------------------------------- タイトル画面 */
+
+#titlecard {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  background: #000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  transition: opacity 0.9s ease;
+  background-image:
+    repeating-linear-gradient(-45deg, rgba(255,122,26,0.09) 0 1px, transparent 1px 12px),
+    repeating-linear-gradient(0deg, rgba(255,122,26,0.05) 0 1px, transparent 1px 46px),
+    repeating-linear-gradient(90deg, rgba(255,122,26,0.05) 0 1px, transparent 1px 46px);
+}
+#titlecard.gone { opacity: 0; pointer-events: none; }
+
+.tc-panel {
+  position: relative;
+  width: min(88vw, 940px);
+  padding: 26px 34px;
+  border: 2px solid var(--orange);
+  background: rgba(12, 4, 0, 0.72);
+  text-align: center;
+}
+.tc-panel::before, .tc-panel::after {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border: 1px solid rgba(255,122,26,0.45);
+  pointer-events: none;
+}
+.tc-panel::after { inset: 11px; border-color: rgba(255,122,26,0.2); }
+.tc-panel .corner-tag {
+  position: absolute;
+  font-family: var(--font-num);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  opacity: 0.8;
+}
+.tc-panel .ct-tl { left: 16px; top: 10px; }
+.tc-panel .ct-bl { left: 16px; bottom: 10px; }
+.tc-panel .ct-br { right: 16px; bottom: 10px; }
+
+.tc-title {
+  font-family: var(--font-title);
+  font-weight: 900;
+  font-size: clamp(30px, 6.4vw, 78px);
+  letter-spacing: 0.24em;
+  line-height: 1.16;
+  color: var(--orange);
+  text-shadow: 0 0 30px rgba(255,122,26,0.4);
+}
+.tc-sub {
+  font-family: var(--font-title);
+  font-weight: 900;
+  font-size: clamp(16px, 2.6vw, 32px);
+  letter-spacing: 0.2em;
+  color: var(--amber);
+  margin-top: 10px;
+}
+.tc-note {
+  margin-top: 16px;
+  font-size: 11px;
+  letter-spacing: 0.26em;
+  color: var(--orange);
+  opacity: 0.85;
+}
+.tc-strip {
+  width: min(88vw, 940px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border: 2px solid var(--orange);
+  padding: 10px 18px;
+  background: rgba(12, 4, 0, 0.72);
+}
+.tc-strip .jp { font-family: var(--font-title); font-weight: 900; letter-spacing: 0.2em; font-size: 15px; }
+.tc-strip .en { font-family: var(--font-num); font-size: 10px; letter-spacing: 0.2em; opacity: 0.8; }
+
+.tc-start {
+  margin-top: 6px;
+  pointer-events: auto;
+  font-family: var(--font-title);
+  font-weight: 900;
+  font-size: 18px;
+  letter-spacing: 0.3em;
+  color: #080a0c;
+  background: var(--orange);
+  border: none;
+  padding: 11px 40px;
+  cursor: pointer;
+  animation: startPulse 1.6s ease-in-out infinite;
+}
+@keyframes startPulse { 50% { background: var(--amber); box-shadow: 0 0 30px rgba(255,177,74,0.6); } }
+
+#loading {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: #000;
+  display: grid;
+  place-items: center;
+  color: var(--orange);
+  font-family: var(--font-num);
+  letter-spacing: 0.3em;
+  font-size: 12px;
+  transition: opacity 0.5s ease;
+}
+#loading.gone { opacity: 0; pointer-events: none; }
+
+/* --------------------------------------------------------------- 画面幅対応 */
+
+@media (max-width: 1180px) {
+  .panel-eva { width: 300px; }
+  .hud-right { width: 250px; }
+  .panel-target { width: 300px; }
+  .hud-log { width: 250px; }
+}
+
+@media (max-width: 860px) {
+  .panel-eva, .panel-target, .hud-log { display: none; }
+  .hud-right { top: 118px; width: 190px; }
+  .mission { min-width: 0; }
+  .mission .op-name { font-size: 18px; letter-spacing: 0.2em; }
+  .hud-clock { bottom: 128px; }
+  .hud-caption { bottom: 182px; }
+}
+
+/* --------------------------------------------------------------- タッチ端末 */
+/* 指で触れる操作系は十分な当たり判定を確保し、スクロールに攫われないようにする。 */
+
+@media (pointer: coarse) {
+  #app canvas { touch-action: none; }
+  .btn { touch-action: manipulation; }
+  .tl-track, .tl-chapter { touch-action: none; }
+}
+
+/* 携帯端末: 情報密度を落として本編の画を優先する。
+   横向きの実効高さは 340px 程度しかないため、縦の積み上げを厳密に配分する。 */
+@media (max-width: 900px) and (pointer: coarse) {
+  .frame-corner { width: 22px; height: 22px; border-width: 1px; }
+  .fc-tl, .fc-tr { top: 8px; }
+  .fc-bl, .fc-br { bottom: 8px; }
+  .fc-tl, .fc-bl { left: 8px; }
+  .fc-tr, .fc-br { right: 8px; }
+
+  .hud-top { left: 14px; right: 14px; top: 10px; gap: 6px; align-items: center; }
+  .brand svg { width: 26px; height: 26px; }
+  .brand-text .jp-name { font-size: 11px; letter-spacing: 0.1em; }
+  .brand-text .en-name { display: none; }
+  .mission .op-name { font-size: 13px; letter-spacing: 0.16em; }
+  .mission .op-en { display: none; }
+  .mission .chapter-bar { margin-top: 3px; padding: 1px 7px; gap: 5px; }
+  .mission .chapter-no { font-size: 8px; }
+  .mission .chapter-ja { font-size: 10px; letter-spacing: 0.1em; }
+  .mission .chapter-en { display: none; }
+  .sysinfo { gap: 3px; }
+  .sysinfo .row { font-size: 7.5px; letter-spacing: 0.08em; }
+  .sysinfo .row:not(.cam) { display: none; }
+  .badge-23d { width: 30px; height: 23px; }
+  .badge-23d span { font-size: 8px; }
+
+  /* 右列は電力ゲージのみ。機関一覧は情報量過多なので畳む */
+  .hud-right { right: 14px; top: 62px; width: 118px; gap: 6px; }
+  .hud-right > .panel + .panel { display: none; }
+  .panel { padding: 5px 7px 6px; }
+  .panel > .head { padding-bottom: 3px; margin-bottom: 4px; }
+  .panel > .head .ja { font-size: 9.5px; letter-spacing: 0.08em; }
+  .panel > .head .en { display: none; }
+  .gauge-big { font-size: 22px; }
+  .gauge-big small { font-size: 9px; }
+  .gauge-track { margin-top: 4px; height: 7px; }
+  .hud-right .panel > div[style] { display: none; } /* SUPPLY/CONV. の補足行 */
+
+  #reticle .rlabel { font-size: 8px; }
+  .hud-alert { font-size: 14px; padding: 3px 14px; top: 62px; letter-spacing: 0.2em; }
+
+  /* 下から: 操作卓 → 時計 → 字幕 の順に積む */
+  .hud-transport { left: 10px; right: 10px; bottom: 8px; padding: 5px 7px 6px; }
+  .tl-track { height: 22px; }
+  .tl-bar, .tl-fill { top: 13px; height: 5px; }
+  .tl-head { top: 7px; height: 17px; width: 3px; }
+  .tl-chapter { height: 22px; padding-left: 0; }
+  .tl-chapter span { display: none; }
+  .tl-controls { margin-top: 5px; gap: 4px; }
+  .btn { min-height: 30px; padding: 0 9px; font-size: 11px; letter-spacing: 0.04em; }
+  .tl-hint { display: none; }
+  .tl-time { font-size: 10px; }
+
+  .hud-clock { bottom: 86px; }
+  .hud-clock .t { font-size: 18px; letter-spacing: 0.08em; }
+  .hud-clock .lbl { display: none; }
+  .hud-clock.count .t { font-size: 34px; }
+
+  .hud-caption { bottom: 112px; max-width: 90vw; }
+  .hud-caption .ja { font-size: clamp(14px, 3.6vw, 24px); letter-spacing: 0.06em; }
+  .hud-caption .en { margin-top: 3px; font-size: 8px; letter-spacing: 0.16em; }
+
+  #hud::after { background-image: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.5) 100%); }
+}
+
+@media (max-width: 430px) and (pointer: coarse) {
+  .brand-text { display: none; }
+}
+
+/* 縦持ちは高さに余裕があるので字幕とゲージを戻す */
+@media (max-width: 900px) and (pointer: coarse) and (orientation: portrait) {
+  .hud-right { top: 74px; width: 132px; }
+  .hud-caption { bottom: 150px; }
+  .hud-caption .ja { font-size: clamp(16px, 5vw, 26px); }
+  .hud-clock { bottom: 112px; }
+  .tl-controls { flex-wrap: wrap; }
+}
+
+/* 縦持ち: 横向きを促す (再生は妨げない) */
+.rotate-hint {
+  display: none;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  padding: 12px 22px;
+  border: 2px solid var(--orange);
+  background: rgba(4, 2, 0, 0.86);
+  text-align: center;
+  animation: rotateHint 7s ease forwards;
+}
+.rotate-hint span {
+  display: block;
+  font-family: var(--font-title);
+  font-weight: 900;
+  font-size: 15px;
+  letter-spacing: 0.18em;
+  color: var(--amber);
+}
+.rotate-hint small {
+  display: block;
+  margin-top: 5px;
+  font-size: 8.5px;
+  letter-spacing: 0.24em;
+  opacity: 0.7;
+}
+@keyframes rotateHint {
+  0%, 72% { opacity: 1; }
+  100% { opacity: 0; visibility: hidden; }
+}
+@media (orientation: portrait) and (max-width: 900px) {
+  .rotate-hint { display: block; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rotate-hint { animation: none; opacity: 1; }
+  .tc-start { animation: none; }
+  .hud-alert.on { animation: none; }
+}
