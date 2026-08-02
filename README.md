@@ -27,6 +27,15 @@ python3 -m http.server 8000
 
 `file://` では ES モジュールが読めないため、必ず HTTP 経由で開くこと。
 
+### サーバを立てずに開く
+
+`dist/yashima.html` は three.js も含めて全部を 1 枚に畳み込んだ単一ファイル版。
+ダウンロードしてダブルクリックすればそのまま動く（`file://` で可）。
+
+```bash
+node tools/build-single.mjs   # 再生成する場合 (esbuild が要る)
+```
+
 ### 操作
 
 | 操作 | 内容 |
