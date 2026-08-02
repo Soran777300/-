@@ -88,12 +88,15 @@ export class CameraDirector {
 
     const fov = THREE.MathUtils.lerp(k0.fov ?? 32, k1.fov ?? 32, e);
     const handheld = THREE.MathUtils.lerp(k0.handheld ?? 1, k1.handheld ?? 1, e);
+    // 地下 (ジオフロント内) では地形へのクランプを外す
+    const under = THREE.MathUtils.lerp(k0.under ?? 0, k1.under ?? 0, e);
 
     return {
       pos: this._pos.set(px, py, pz),
       target: this._tgt.set(tx, ty, tz),
       fov,
       handheld,
+      under,
     };
   }
 
@@ -121,14 +124,25 @@ export class CameraDirector {
       this.shakeAmp -= this.shakeAmp * this.shakeDecay * dt;
     }
 
-    // 地形へのめり込み防止
-    const g = terrainY(s.pos.x, s.pos.z) + this.minClearance;
-    if (s.pos.y < g) s.pos.y = g;
+    // 地形へのめり込み防止 (地下カットでは無効)
+    if (s.under < 0.5) {
+      const g = terrainY(s.pos.x, s.pos.z) + this.minClearance;
+      if (s.pos.y < g) s.pos.y = g;
+    }
 
     this.camera.position.copy(s.pos);
     this.camera.lookAt(s.target);
-    if (Math.abs(this.camera.fov - s.fov) > 0.01) {
-      this.camera.fov = s.fov;
+
+    // 画面が 16:9 より縦長のときは、横方向の画角を保つように垂直画角を広げる。
+    // (縦持ちのスマートフォンで被写体が画面外へ出るのを防ぐ)
+    let fov = s.fov;
+    const DESIGN_ASPECT = 16 / 9;
+    if (this.camera.aspect < DESIGN_ASPECT) {
+      const tanH = Math.tan(THREE.MathUtils.degToRad(fov) / 2) * DESIGN_ASPECT;
+      fov = Math.min(84, THREE.MathUtils.radToDeg(2 * Math.atan(tanH / this.camera.aspect)));
+    }
+    if (Math.abs(this.camera.fov - fov) > 0.01) {
+      this.camera.fov = fov;
       this.camera.updateProjectionMatrix();
     }
     this.lastTarget = s.target.clone();

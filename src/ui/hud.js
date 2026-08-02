@@ -2,7 +2,7 @@
 // 参照意匠: エントリープラグ予備電源パネル / MAGI 端末フレーム / 3Dデータビューア
 import { nervLogo } from './logo.js';
 
-const ORGS = [
+const YASHIMA_ORGS = [
   {
     name: '特務機関ネルフ', code: 'NERV / SPECIAL AGENCY',
     phases: [[0, '作戦統制', 'st-active']],
@@ -37,6 +37,39 @@ const ORGS = [
   },
 ];
 
+/**
+ * 作戦ごとの表示定義。既定値はヤシマ作戦。
+ * 別の作戦を再生するときは createHUD({ config: ... }) で差し替える。
+ */
+export const YASHIMA_HUD = {
+  opName: 'ヤシマ作戦',
+  opEn: 'OPERATION YASHIMA — 3D OVERHEAD RECONSTRUCTION',
+  code: 'CODE No.1670054',
+  clockLabel: 'MISSION TIME',
+  orgs: YASHIMA_ORGS,
+  plug: { title: 'RESERVE ENERGY REMAINING', sub: 'EVA-01 : ENTRY PLUG' },
+  gauge: {
+    ja: '電力集中率',
+    en: 'POWER CONVERGENCE',
+    text: (s) => s.power.toFixed(1),
+    unit: '%',
+    fill: (s) => s.power,
+    subL: 'SUPPLY 18.0 TW',
+    subR: 'CONV. 8.7 %',
+  },
+  reticle: 'TARGET LOCK<br>PATTERN BLUE',
+  dead: (s) => s.at <= 0.5,
+  targetRows: [
+    { dt: '目標', dd: () => '第5使徒 ラミエル' },
+    { dt: 'パターン', dd: (s, dead) => (dead ? '反応 消失' : '青 / BLUE'), warn: (s, dead) => dead },
+    { dt: 'ATフィールド', dd: (s, dead) => (dead ? '0 %' : s.at.toFixed(0) + ' %') },
+    { dt: '射距離', dd: (s) => (s.range > 0 ? Math.round(s.range).toLocaleString('en-US') + ' m' : '— m') },
+    { dt: '目標高度', dd: (s) => Math.round(s.altitude).toLocaleString('en-US') + ' m' },
+    { dt: '兵装', dd: () => '陽電子砲 / POSITRON' },
+    { dt: '射撃可能数', dd: (s) => (s.t < 176 ? '1' : s.t < 208 ? '1 (再充填)' : '0') },
+  ],
+};
+
 const SEGS = [
   { id: 2, level: 1.05, on: 20 },
   { id: 3, level: 2.10, on: 38 },
@@ -66,6 +99,8 @@ function fmtClock(sec) {
 
 export function createHUD(opts) {
   const { duration, chapters, onSeek, onTogglePlay, onSpeed, onToggleFree, onRestart, touch } = opts;
+  const cfg = opts.config || YASHIMA_HUD;
+  const ORGS = cfg.orgs;
 
   const root = el('div');
   root.id = 'hud';
@@ -77,7 +112,7 @@ export function createHUD(opts) {
   const top = el('div', 'hud-top');
   const brand = el('div', 'brand');
   brand.innerHTML =
-    nervLogo({ size: 54, color: 'var(--orange)', stars: true }) +
+    nervLogo({ size: 54, color: 'var(--orange)' }) +
     `<div class="brand-text">
        <div class="jp-name">特務機関ネルフ</div>
        <div class="en-name">NERV — TACTICAL OPERATIONS DISPLAY</div>
@@ -85,8 +120,8 @@ export function createHUD(opts) {
 
   const mission = el('div', 'mission');
   mission.innerHTML = `
-    <div class="op-name">ヤシマ作戦</div>
-    <div class="op-en">OPERATION YASHIMA — 3D OVERHEAD RECONSTRUCTION</div>
+    <div class="op-name">${cfg.opName}</div>
+    <div class="op-en">${cfg.opEn}</div>
     <div class="chapter-bar">
       <span class="chapter-no">CH.00</span>
       <span class="chapter-ja">—</span>
@@ -100,7 +135,7 @@ export function createHUD(opts) {
   sysinfo.innerHTML = `
     <div class="badge-23d"><span class="b2d">2D</span><span class="b3d">3D</span></div>
     <div class="row">NERV ONLY — CLASS A</div>
-    <div class="row">CODE No.1670054</div>
+    <div class="row">${cfg.code}</div>
     <div class="row cam">CAM 000 / ALT 0000 m</div>`;
   const camRow = sysinfo.querySelector('.cam');
 
@@ -158,7 +193,7 @@ export function createHUD(opts) {
   const evaCaption = el(
     'div',
     'eva-caption',
-    `RESERVE ENERGY REMAINING<br>EVA-01 : ENTRY PLUG &nbsp;<span class="val">100.0 %</span>`
+    `${cfg.plug.title}<br>${cfg.plug.sub} &nbsp;<span class="val">100.0 %</span>`
   );
   const reserveVal = evaCaption.querySelector('.val');
 
@@ -170,14 +205,15 @@ export function createHUD(opts) {
 
   const powerPanel = el('div', 'panel hatch');
   powerPanel.innerHTML = `
-    <div class="head"><span class="ja">電力集中率</span><span class="en">POWER CONVERGENCE</span></div>
-    <div class="gauge-big"><span class="v">0.0</span><small>%</small></div>
+    <div class="head"><span class="ja">${cfg.gauge.ja}</span><span class="en">${cfg.gauge.en}</span></div>
+    <div class="gauge-big"><span class="v">0.0</span><small>${cfg.gauge.unit}</small></div>
     <div class="gauge-track"><div class="gauge-fill" style="width:0%"></div></div>
-    <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:9.5px;opacity:.7;letter-spacing:.1em">
-      <span>SUPPLY 18.0 TW</span><span>CONV. 8.7 %</span>
-    </div>`;
+    <div class="gauge-sub"><span>${cfg.gauge.subL}</span><span>${cfg.gauge.subR}</span></div>`;
   const powerVal = powerPanel.querySelector('.v');
   const powerFill = powerPanel.querySelector('.gauge-fill');
+  const gaugeJa = powerPanel.querySelector('.head .ja');
+  const gaugeEn = powerPanel.querySelector('.head .en');
+  const gaugeUnit = powerPanel.querySelector('.gauge-big small');
 
   const orgPanel = el('div', 'panel');
   orgPanel.innerHTML = `<div class="head"><span class="ja">関係機関</span><span class="en">PARTICIPATING AGENCIES</span></div>`;
@@ -194,22 +230,10 @@ export function createHUD(opts) {
 
   // ------------------------------------------------------------ 目標情報
   const targetPanel = el('div', 'panel panel-target');
-  targetPanel.innerHTML = `
-    <div class="head"><span class="ja">目標情報</span><span class="en">TARGET DATA</span></div>
-    <dl class="kv">
-      <dt>目標</dt><dd>第5使徒 ラミエル</dd>
-      <dt>パターン</dt><dd class="pat">青 / BLUE</dd>
-      <dt>ATフィールド</dt><dd class="at">100 %</dd>
-      <dt>射距離</dt><dd class="rng">— m</dd>
-      <dt>目標高度</dt><dd class="alt">— m</dd>
-      <dt>兵装</dt><dd>陽電子砲 / POSITRON</dd>
-      <dt>射撃可能数</dt><dd class="shots">1</dd>
-    </dl>`;
-  const patEl = targetPanel.querySelector('.pat');
-  const atEl = targetPanel.querySelector('.at');
-  const rngEl = targetPanel.querySelector('.rng');
-  const altEl = targetPanel.querySelector('.alt');
-  const shotsEl = targetPanel.querySelector('.shots');
+  targetPanel.innerHTML =
+    `<div class="head"><span class="ja">目標情報</span><span class="en">TARGET DATA</span></div>` +
+    `<dl class="kv">${cfg.targetRows.map((r) => `<dt>${r.dt}</dt><dd></dd>`).join('')}</dl>`;
+  const targetVals = [...targetPanel.querySelectorAll('dd')];
   root.appendChild(targetPanel);
 
   // ---------------------------------------------------------------- ログ
@@ -218,7 +242,7 @@ export function createHUD(opts) {
 
   // -------------------------------------------------------------- 時刻
   const clock = el('div', 'hud-clock');
-  clock.innerHTML = `<div class="t minus">T-00:00.0</div><div class="lbl">MISSION TIME</div>`;
+  clock.innerHTML = `<div class="t minus">T-00:00.0</div><div class="lbl">${cfg.clockLabel}</div>`;
   const clockT = clock.querySelector('.t');
   root.appendChild(clock);
 
@@ -251,7 +275,7 @@ export function createHUD(opts) {
       </g>
       <circle cx="95" cy="95" r="3" fill="#ff2d55"/>
     </svg>
-    <div class="rlabel">TARGET LOCK<br>PATTERN BLUE</div>`;
+    <div class="rlabel">${cfg.reticle}</div>`;
   const reticleSpin = reticle.querySelector('.spin');
   const reticleLabel = reticle.querySelector('.rlabel');
   root.appendChild(reticle);
@@ -420,15 +444,21 @@ export function createHUD(opts) {
 
       // 予備電源
       const r = s.reserve;
-      reserveVal.textContent = r.toFixed(1) + ' %';
+      reserveVal.textContent = cfg.plug.value ? cfg.plug.value(s) : r.toFixed(1) + ' %';
       reserveBar.style.width = Math.max(2, r) + '%';
       reserveBar.classList.toggle('low', r < 32);
       segEls.forEach((e, i) => e.classList.toggle('off', r < SEGS[i].on));
       sysBoxes.forEach((b, i) => b.classList.toggle('off', r < sysDefs[i].off));
 
-      // 電力
-      powerVal.textContent = s.power.toFixed(1);
-      powerFill.style.width = s.power + '%';
+      // 主ゲージ (作戦の段階で計器そのものが切り替わることがある)
+      if (cfg.gauge.head) {
+        const [gja, gen, gunit] = cfg.gauge.head(s);
+        if (gaugeJa.textContent !== gja) gaugeJa.textContent = gja;
+        if (gaugeEn.textContent !== gen) gaugeEn.textContent = gen;
+        if (gunit && gaugeUnit.textContent !== gunit) gaugeUnit.textContent = gunit;
+      }
+      powerVal.textContent = cfg.gauge.text(s);
+      powerFill.style.width = Math.min(100, Math.max(0, cfg.gauge.fill(s))) + '%';
 
       // 機関
       for (const o of orgRows) {
@@ -440,13 +470,12 @@ export function createHUD(opts) {
       }
 
       // 目標
-      const dead = s.at <= 0.5;
-      patEl.textContent = dead ? '反応 消失' : '青 / BLUE';
-      patEl.classList.toggle('warn', dead);
-      atEl.textContent = dead ? '0 %' : s.at.toFixed(0) + ' %';
-      rngEl.textContent = s.range > 0 ? Math.round(s.range).toLocaleString('en-US') + ' m' : '— m';
-      altEl.textContent = Math.round(s.altitude).toLocaleString('en-US') + ' m';
-      shotsEl.textContent = s.t < 176 ? '1' : s.t < 208 ? '1 (再充填)' : '0';
+      const dead = cfg.dead(s);
+      cfg.targetRows.forEach((row, i) => {
+        const dd = targetVals[i];
+        dd.textContent = row.dd(s, dead);
+        dd.classList.toggle('warn', !!(row.warn && row.warn(s, dead)));
+      });
 
       // 時刻
       const mt = s.t - s.T0;
@@ -512,23 +541,32 @@ export function createHUD(opts) {
 
 // -------------------------------------------------------------- タイトル画面
 
-export function createTitleCard(onStart) {
+export function createTitleCard(onStart, info = {}) {
+  const {
+    menu = 'Menu 2-35',
+    code = 'Code No.1670054',
+    title = 'ヤシマ作戦',
+    sub = '3D 俯瞰 作戦記録',
+    note = 'OPERATION YASHIMA — 3D OVERHEAD OPERATIONAL RECONSTRUCTION',
+    back = null,
+  } = info;
   const tc = el('div');
   tc.id = 'titlecard';
   tc.innerHTML = `
     <div class="tc-panel">
-      <span class="corner-tag ct-tl">Menu 2-35</span>
-      <span class="corner-tag ct-bl">Code No.1670054</span>
+      <span class="corner-tag ct-tl">${menu}</span>
+      <span class="corner-tag ct-bl">${code}</span>
       <span class="corner-tag ct-br">NERV ONLY</span>
-      <div class="tc-title">ヤシマ作戦</div>
-      <div class="tc-sub">3D 俯瞰 作戦記録</div>
-      <div class="tc-note">OPERATION YASHIMA — 3D OVERHEAD OPERATIONAL RECONSTRUCTION</div>
+      <div class="tc-title">${title}</div>
+      <div class="tc-sub">${sub}</div>
+      <div class="tc-note">${note}</div>
     </div>
     <div class="tc-strip">
       <span class="jp">MAGI 記録データ 再生</span>
       <span class="en">VIEWER OF VARIOUS THREE-DIMENSIONAL DATA RECORDED BY THE MAGI</span>
     </div>
-    <button class="tc-start">再生 / START</button>`;
+    <button class="tc-start">再生 / START</button>
+    ${back ? `<a class="tc-back" href="${back}">← 3D データ一覧へ / INDEX</a>` : ''}`;
   document.body.appendChild(tc);
   tc.querySelector('.tc-start').onclick = () => {
     tc.classList.add('gone');

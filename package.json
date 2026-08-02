@@ -1,0 +1,14 @@
+{
+  "name": "eva-3d-operation-viewer",
+  "private": true,
+  "version": "0.2.0",
+  "description": "MAGI 3D 作戦記録ビューア — 第10使徒 迎撃戦 / ヤシマ作戦",
+  "type": "module",
+  "scripts": {
+    "serve": "python3 -m http.server 8000",
+    "build": "node tools/build-single.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.2"
+  }
+}

@@ -72,7 +72,9 @@ function smoothArray(arr, passes) {
 
 /**
  * @param {object} o
- * @param {Array<[number,number]>} o.points 制御点 (x, z)
+ * @param {Array<[number,number]>} [o.points] 制御点 (x, z) — 地形に追従させる
+ * @param {Array<[number,number,number]>} [o.points3] 制御点 (x, y, z) — 高さを直接指定
+ *        (ジオフロント内部・射出口など、地表に沿わない経路用)
  * @param {number} [o.width]    軸部の幅 (world unit)
  * @param {number} [o.headLen]  矢頭の長さ (world unit)
  * @param {number} [o.headWidth] 矢頭幅倍率
@@ -90,8 +92,11 @@ export function createArrow(o) {
   const arc = o.arc ?? 0;
   const N = o.samples ?? 200;
 
+  const free = !!o.points3; // 高さを台本側で与える (地形追従しない)
+  const src = free ? o.points3 : o.points;
+
   const curve = new THREE.CatmullRomCurve3(
-    o.points.map((p) => new THREE.Vector3(p[0], 0, p[1])),
+    src.map((p) => (free ? new THREE.Vector3(p[0], p[1], p[2]) : new THREE.Vector3(p[0], 0, p[1]))),
     false,
     'catmullrom',
     0.5
@@ -103,21 +108,24 @@ export function createArrow(o) {
 
   const dist = [0];
   for (let i = 1; i <= N; i++) {
-    dist.push(dist[i - 1] + Math.hypot(pts[i].x - pts[i - 1].x, pts[i].z - pts[i - 1].z));
+    const dy = free ? pts[i].y - pts[i - 1].y : 0;
+    dist.push(dist[i - 1] + Math.hypot(pts[i].x - pts[i - 1].x, dy, pts[i].z - pts[i - 1].z));
   }
   const total = dist[N] || 1;
 
-  // 接地高さ (平滑化して段差を消す)
-  let ys = pts.map((p) => surfaceY(p.x, p.z) + hover);
-  ys = smoothArray(ys, 6);
-  for (let i = 0; i <= N; i++) {
-    const g = surfaceY(pts[i].x, pts[i].z) + hover * 0.45;
-    if (ys[i] < g) ys[i] = g;
-    if (arc) {
-      const t = dist[i] / total;
-      ys[i] += arc * Math.sin(Math.PI * t);
+  if (!free) {
+    // 接地高さ (平滑化して段差を消す)
+    let ys = pts.map((p) => surfaceY(p.x, p.z) + hover);
+    ys = smoothArray(ys, 6);
+    for (let i = 0; i <= N; i++) {
+      const g = surfaceY(pts[i].x, pts[i].z) + hover * 0.45;
+      if (ys[i] < g) ys[i] = g;
+      if (arc) {
+        const t = dist[i] / total;
+        ys[i] += arc * Math.sin(Math.PI * t);
+      }
+      pts[i].y = ys[i];
     }
-    pts[i].y = ys[i];
   }
 
   // --- 幅プロファイル ---------------------------------------------------------
@@ -155,19 +163,22 @@ export function createArrow(o) {
   for (let i = 0; i < M; i++) {
     const a = nodes[Math.max(0, i - 1)].p;
     const b = nodes[Math.min(M - 1, i + 1)].p;
-    tangent.set(b.x - a.x, 0, b.z - a.z);
+    tangent.set(b.x - a.x, free ? b.y - a.y : 0, b.z - a.z);
     if (tangent.lengthSq() < 1e-9) tangent.set(0, 0, 1);
     tangent.normalize();
-    side.crossVectors(up, tangent).normalize().multiplyScalar(nodes[i].w / 2);
+    side.crossVectors(up, tangent);
+    // 垂直な経路では up と平行になり幅が消えるため、別軸で張る
+    if (side.lengthSq() < 1e-6) side.set(1, 0, 0);
+    side.normalize().multiplyScalar(nodes[i].w / 2);
 
     const p = nodes[i].p;
     const u = nodes[i].d / total;
 
     position[i * 6 + 0] = p.x + side.x;
-    position[i * 6 + 1] = p.y;
+    position[i * 6 + 1] = p.y + side.y;
     position[i * 6 + 2] = p.z + side.z;
     position[i * 6 + 3] = p.x - side.x;
-    position[i * 6 + 4] = p.y;
+    position[i * 6 + 4] = p.y - side.y;
     position[i * 6 + 5] = p.z - side.z;
 
     aU[i * 2] = u;

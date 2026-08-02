@@ -5,6 +5,7 @@ import { mulberry32 } from './noise.js';
 
 const vert = /* glsl */ `
 attribute vec3 aParam;   // x: 高さ(unit), y: 乱数, z: 幅
+uniform float uRetract;  // 0..1 ビル格納 (要塞都市の戦闘配置)
 varying vec3 vLocal;   // 単位ボックス座標 (-0.5..0.5)
 varying vec3 vSurf;    // 実寸ローカル座標 (window 割付用)
 varying vec3 vParam;
@@ -21,6 +22,9 @@ void main() {
   vSurf = position * scale;
   vNrm = normalize(mat3(instanceMatrix) * normal);
   vec4 wp = instanceMatrix * vec4(position, 1.0);
+  // 格納: 棟ごとに少しずつ時間差をつけて地下へ沈める
+  float lag = clamp((uRetract - aParam.y * 0.28) / 0.72, 0.0, 1.0);
+  wp.y -= aParam.x * lag * 1.04;
   vWorld = wp.xyz;
   gl_Position = projectionMatrix * modelViewMatrix * wp;
 }
@@ -34,6 +38,9 @@ uniform vec3  uEdge;
 uniform float uTime;
 uniform float uPower;    // 市街の通電率 0..1 (作戦中は消灯)
 uniform float uAlert;    // 警報点滅
+uniform float uCut;      // 断面表示で市街を透過させる
+uniform vec3  uCutCenter;
+uniform float uCutRadius;
 uniform vec3  uFogColor;
 uniform float uFogNear;
 uniform float uFogFar;
@@ -75,7 +82,14 @@ void main() {
   float fog = smoothstep(uFogNear, uFogFar, d);
   col = mix(col, uFogColor, fog * 0.55);
 
-  gl_FragColor = vec4(col, 1.0);
+  float a = 1.0;
+  if (uCut > 0.001) {
+    float cd = length(vWorld.xz - uCutCenter.xz);
+    a -= uCut * (1.0 - smoothstep(uCutRadius * 0.72, uCutRadius * 1.15, cd));
+    if (a < 0.01) discard;
+  }
+
+  gl_FragColor = vec4(col, a);
 }
 `;
 
@@ -121,9 +135,14 @@ export function createCity() {
       uTime: { value: 0 },
       uPower: { value: 1 },
       uAlert: { value: 0 },
+      uRetract: { value: 0 },
+      uCut: { value: 0 },
+      uCutCenter: { value: new THREE.Vector3(PLACES.tokyo3.x, 0, PLACES.tokyo3.z) },
+      uCutRadius: { value: 14 },
     },
     vertexShader: vert,
     fragmentShader: frag,
+    transparent: true,
   });
 
   const mesh = new THREE.InstancedMesh(geo, mat, cells.length);

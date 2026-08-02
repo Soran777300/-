@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>第10の使徒 迎撃戦 — ネルフ本部 侵攻 / ニアサードインパクト収束</title>
+<meta name="description" content="新劇場版:破 準拠。第10の使徒によるネルフ本部侵攻から、初号機の覚醒・ニアサードインパクト・カシウスの槍による収束までを通しで再構成した3D俯瞰デモ。箱根カルデラの地形、ネルフ・戦略自衛隊・国連軍・関係各省庁の軍勢と進軍矢印、ジオフロント断面を NERV UI で描く。">
+<link rel="stylesheet" href="./src/style.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23000'/%3E%3Cpath d='M6 26 L16 6 L26 26 Z' fill='%23ff7a1a'/%3E%3C/svg%3E">
+<script type="importmap">
+{
+  "imports": {
+    "three": "./vendor/three/three.module.js",
+    "three/addons/": "./vendor/three/addons/"
+  }
+}
+</script>
+</head>
+<body>
+  <div id="app"></div>
+
+  <div id="loading">MAGI — LOADING TERRAIN DATA …</div>
+
+  <noscript>
+    <div style="padding:40px;color:#ff7a1a;font-family:sans-serif">
+      このデモの再生には JavaScript と WebGL2 が必要です。
+    </div>
+  </noscript>
+
+  <script type="module" src="./src/main-zeruel.js"></script>
+</body>
+</html>
