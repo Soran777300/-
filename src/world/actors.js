@@ -57,7 +57,7 @@ void main() {
 }
 `;
 
-export function createRamiel(position, radius = 1.35) {
+export function createRamiel(position, radius = 1.35, fragCount = 90) {
   const group = new THREE.Group();
   group.name = 'ramiel';
   group.position.copy(position);
@@ -123,7 +123,6 @@ export function createRamiel(position, radius = 1.35) {
   group.add(atGroup);
 
   // 破片
-  const fragCount = 90;
   const fragGeo = new THREE.TetrahedronGeometry(radius * 0.10, 0);
   const fragMat = new THREE.MeshBasicMaterial({ color: 0x4f9dff, transparent: true, opacity: 0 });
   const frags = new THREE.InstancedMesh(fragGeo, fragMat, fragCount);

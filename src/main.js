@@ -10,7 +10,7 @@ import { createTerrain } from './world/terrain.js';
 import { createWater } from './world/water.js';
 import { createCity, createGeofront } from './world/city.js';
 import { createSky } from './world/sky.js';
-import { createMarker } from './world/markers.js';
+import { createMarker, setLabelAnisotropy } from './world/markers.js';
 import { createArrow } from './world/arrows.js';
 import {
   createRamiel, createEva, createPositronRifle, createShield,
@@ -23,6 +23,7 @@ import {
   applyTracks, buildEvents, chapterAt, captionAt, reservePower, powerConvergence, atField,
 } from './director/script.js';
 import { createHUD, createTitleCard } from './ui/hud.js';
+import { QUALITY, IS_TOUCH } from './quality.js';
 
 // ---------------------------------------------------------------------------
 // レンダラ
@@ -30,7 +31,7 @@ import { createHUD, createTitleCard } from './ui/hud.js';
 
 const app = document.getElementById('app');
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, QUALITY.maxPixelRatio));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.toneMapping = THREE.NoToneMapping;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -49,10 +50,12 @@ camera.position.set(-14, 205, 315);
 const sky = createSky();
 scene.add(sky.mesh);
 
-const terrain = createTerrain();
+setLabelAnisotropy(QUALITY.anisotropy);
+
+const terrain = createTerrain(QUALITY.terrainSeg);
 scene.add(terrain.mesh);
 
-const water = createWater();
+const water = createWater({ seaSeg: QUALITY.seaSeg, lakeSeg: QUALITY.lakeSeg });
 scene.add(water);
 
 const city = createCity();
@@ -91,7 +94,7 @@ for (const def of ARROWS) {
 }
 
 // --- 実体 -------------------------------------------------------------------
-const ramiel = createRamiel(new THREE.Vector3(24, RAMIEL_Y, 2), 1.35);
+const ramiel = createRamiel(new THREE.Vector3(24, RAMIEL_Y, 2), 1.35, QUALITY.ramielFrags);
 scene.add(ramiel);
 
 const fireGroundY = terrainY(FIRE_POS.x, FIRE_POS.z);
@@ -124,7 +127,7 @@ scene.add(counterBeam);
 const sightLine = createSightLine(0x2fd8ff);
 scene.add(sightLine);
 
-const blasts = createBlastPool(8);
+const blasts = createBlastPool(QUALITY.blastCount);
 scene.add(blasts);
 
 // ---------------------------------------------------------------------------
@@ -133,12 +136,11 @@ scene.add(blasts);
 
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
-const bloom = new UnrealBloomPass(
-  new THREE.Vector2(window.innerWidth, window.innerHeight),
-  0.62, // strength
-  0.52, // radius
-  0.42 // threshold
+const bloomRes = new THREE.Vector2(
+  window.innerWidth * QUALITY.bloomScale,
+  window.innerHeight * QUALITY.bloomScale
 );
+const bloom = new UnrealBloomPass(bloomRes, QUALITY.bloomStrength, 0.52, 0.42);
 composer.addPass(bloom);
 composer.addPass(new OutputPass());
 
@@ -194,6 +196,7 @@ const events = buildEvents(ctx).sort((a, b) => a.t - b.t);
 const hud = createHUD({
   duration: DURATION,
   chapters: CHAPTERS,
+  touch: IS_TOUCH,
   onTogglePlay() {
     playing = !playing;
     hud.setPlaying(playing);
@@ -271,7 +274,7 @@ window.addEventListener('resize', () => {
   camera.updateProjectionMatrix();
   renderer.setSize(w, h);
   composer.setSize(w, h);
-  bloom.setSize(w, h);
+  bloom.setSize(w * QUALITY.bloomScale, h * QUALITY.bloomScale);
 });
 
 // ---------------------------------------------------------------------------

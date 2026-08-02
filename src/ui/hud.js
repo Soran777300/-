@@ -65,7 +65,7 @@ function fmtClock(sec) {
 }
 
 export function createHUD(opts) {
-  const { duration, chapters, onSeek, onTogglePlay, onSpeed, onToggleFree, onRestart } = opts;
+  const { duration, chapters, onSeek, onTogglePlay, onSpeed, onToggleFree, onRestart, touch } = opts;
 
   const root = el('div');
   root.id = 'hud';
@@ -264,7 +264,7 @@ export function createHUD(opts) {
   const tlHead = track.querySelector('.tl-head');
 
   const chapterEls = chapters.map((ch, i) => {
-    const c = el('div', 'tl-chapter', `${pad(i)} ${ch.ja}`);
+    const c = el('div', 'tl-chapter', `<span>${pad(i)} ${ch.ja}</span>`);
     c.style.left = (ch.t / duration) * 100 + '%';
     c.dataset.t = ch.t;
     track.appendChild(c);
@@ -272,27 +272,49 @@ export function createHUD(opts) {
   });
 
   const controls = el('div', 'tl-controls');
-  const btnPlay = el('button', 'btn', '⏸ 一時停止');
-  const btnBack = el('button', 'btn', '⏪ -10s');
-  const btnFwd = el('button', 'btn', '⏩ +10s');
-  const btnRestart = el('button', 'btn', '⏮ 先頭へ');
-  const btnFree = el('button', 'btn', '自由視点 F');
-  const btnHud = el('button', 'btn', 'HUD H');
-  const speedWrap = el('div', 'tl-controls');
-  const speedBtns = [0.5, 1, 2].map((s) => {
-    const b = el('button', 'btn' + (s === 1 ? ' on' : ''), '×' + s);
-    b.onclick = () => {
-      speedBtns.forEach((x) => x.classList.remove('on'));
-      b.classList.add('on');
-      onSpeed(s);
+  const btnPlay = el('button', 'btn play', touch ? '⏸' : '⏸ 一時停止');
+  const btnBack = el('button', 'btn', touch ? '⏪' : '⏪ -10s');
+  const btnFwd = el('button', 'btn', touch ? '⏩' : '⏩ +10s');
+  const btnRestart = el('button', 'btn', touch ? '⏮' : '⏮ 先頭へ');
+  const btnFree = el('button', 'btn', touch ? '視点' : '自由視点 F');
+  const btnHud = el('button', 'btn', 'HUD');
+  const btnFull = el('button', 'btn', '⛶');
+  btnFull.setAttribute('aria-label', '全画面');
+  // 速度: 広い画面では 3 ボタン、狭い画面では 1 ボタンで巡回させる
+  const SPEEDS = [0.5, 1, 2];
+  const speedWrap = el('div', 'tl-controls speed-group');
+  let speedIdx = 1;
+  let speedBtns = [];
+  let cycleBtn = null;
+  if (touch) {
+    cycleBtn = el('button', 'btn', '×1');
+    cycleBtn.onclick = () => {
+      speedIdx = (speedIdx + 1) % SPEEDS.length;
+      cycleBtn.textContent = '×' + SPEEDS[speedIdx];
+      cycleBtn.classList.toggle('on', SPEEDS[speedIdx] !== 1);
+      onSpeed(SPEEDS[speedIdx]);
     };
-    speedWrap.appendChild(b);
-    return b;
-  });
+    speedWrap.appendChild(cycleBtn);
+  } else {
+    speedBtns = SPEEDS.map((s) => {
+      const b = el('button', 'btn' + (s === 1 ? ' on' : ''), '×' + s);
+      b.onclick = () => {
+        speedBtns.forEach((x) => x.classList.remove('on'));
+        b.classList.add('on');
+        onSpeed(s);
+      };
+      speedWrap.appendChild(b);
+      return b;
+    });
+  }
   const timeEl = el('div', 'tl-time', '00:00 / 00:00');
   const hint = el('div', 'tl-hint', 'SPACE 再生 / ←→ 10秒 / 1-9 章 / F 自由視点 / H HUD');
 
-  controls.append(btnRestart, btnBack, btnPlay, btnFwd, speedWrap, btnFree, btnHud, hint, timeEl);
+  if (touch) {
+    controls.append(btnRestart, btnBack, btnPlay, btnFwd, speedWrap, btnFree, btnHud, btnFull, timeEl);
+  } else {
+    controls.append(btnRestart, btnBack, btnPlay, btnFwd, speedWrap, btnFree, btnHud, hint, timeEl);
+  }
   transport.append(track, controls);
   root.appendChild(transport);
 
@@ -302,6 +324,14 @@ export function createHUD(opts) {
   btnRestart.onclick = () => onRestart();
   btnFree.onclick = () => onToggleFree();
   btnHud.onclick = () => api.toggleHud();
+  btnFull.onclick = async () => {
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen();
+      else await document.documentElement.requestFullscreen();
+    } catch {
+      // 対応していない環境 (iOS Safari 等) では黙って何もしない
+    }
+  };
 
   let dragging = false;
   const seekFromEvent = (e) => {
@@ -325,6 +355,13 @@ export function createHUD(opts) {
       onSeek(parseFloat(c.dataset.t) + 0.01, false);
     })
   );
+
+  // ------------------------------------------------------------ 縦持ち案内
+  if (touch) {
+    root.appendChild(
+      el('div', 'rotate-hint', '<span>横向きでの再生を推奨</span><small>ROTATE FOR FULL FRAME</small>')
+    );
+  }
 
   // ---------------------------------------------------------------- 発光
   const flashEl = el('div');
@@ -360,7 +397,7 @@ export function createHUD(opts) {
       logLines.splice(0).forEach((l) => l.remove());
     },
     setPlaying(p) {
-      btnPlay.textContent = p ? '⏸ 一時停止' : '▶ 再生';
+      btnPlay.textContent = p ? (touch ? '⏸' : '⏸ 一時停止') : (touch ? '▶' : '▶ 再生');
     },
     setFree(f) {
       btnFree.classList.toggle('on', f);

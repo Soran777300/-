@@ -16,6 +16,12 @@ export const FACTION = {
 const LABEL_W = 768;
 const LABEL_H = 232;
 const _wp = new THREE.Vector3();
+let labelAnisotropy = 4;
+
+/** 端末性能に応じた銘板テクスチャの異方性フィルタ設定 */
+export function setLabelAnisotropy(v) {
+  labelAnisotropy = v;
+}
 
 function drawLabel(name, code, status, colorHex, tag) {
   const c = document.createElement('canvas');
@@ -97,7 +103,7 @@ function drawLabel(name, code, status, colorHex, tag) {
   g.globalAlpha = 1;
 
   const tex = new THREE.CanvasTexture(c);
-  tex.anisotropy = 4;
+  tex.anisotropy = labelAnisotropy;
   tex.needsUpdate = true;
   return tex;
 }

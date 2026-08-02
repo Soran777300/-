@@ -36,6 +36,19 @@ python3 -m http.server 8000
 node tools/build-single.mjs   # 再生成する場合 (esbuild が要る)
 ```
 
+### スマートフォン
+
+タッチ端末を検出すると、自動で軽量設定（地形分割 176 / pixelRatio 1.1 /
+ブルーム半解像度）に落ち、HUD もタッチ向けの簡易表示に切り替わる。
+**横向き推奨**。`?q=low` `?q=mid` `?q=high` で品質を明示指定できる。
+
+同じ Wi-Fi 内の PC でサーバを立て、スマホから PC の LAN IP を開くのが早い:
+
+```bash
+python3 -m http.server 8000 --bind 0.0.0.0
+# スマホで http://<PCのLAN IP>:8000/ を開く
+```
+
 ### 操作
 
 | 操作 | 内容 |

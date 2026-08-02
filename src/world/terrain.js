@@ -119,8 +119,9 @@ void main() {
 }
 `;
 
-export function createTerrain() {
-  const geo = new THREE.PlaneGeometry(MAP_SIZE, MAP_SIZE, TERRAIN_SEG, TERRAIN_SEG);
+/** @param {number} [segments] 分割数 (端末性能に応じて落とす) */
+export function createTerrain(segments = TERRAIN_SEG) {
+  const geo = new THREE.PlaneGeometry(MAP_SIZE, MAP_SIZE, segments, segments);
   geo.rotateX(-Math.PI / 2); // XZ 平面へ
 
   const pos = geo.attributes.position;

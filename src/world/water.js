@@ -68,7 +68,7 @@ function buildPlane(size, seg, maskFn, y) {
   return geo;
 }
 
-export function createWater() {
+export function createWater({ seaSeg = 200, lakeSeg = 150 } = {}) {
   const group = new THREE.Group();
   group.name = 'water';
 
@@ -81,7 +81,7 @@ export function createWater() {
   // --- 相模湾 -------------------------------------------------------------
   const seaGeo = buildPlane(
     { w: MAP_SIZE, h: MAP_SIZE, cx: 0, cz: 0 },
-    200,
+    seaSeg,
     (x, z) => smoothstep(6, -26, elevationM(x, z)),
     SEA_Y
   );
@@ -102,7 +102,7 @@ export function createWater() {
   // --- 芦ノ湖 -------------------------------------------------------------
   const lakeGeo = buildPlane(
     { w: 90, h: 90, cx: -22, cz: 14 },
-    150,
+    lakeSeg,
     (x, z) => lakeMask(x, z),
     LAKE_Y
   );
