@@ -280,8 +280,8 @@ export const CAMERA_KEYS = [
 
   // ジオフロントへ降下 (地形クランプを外す)
   { t: 212, pos: [32.5, 15.0, 14.5], target: [26.1, 10.8, 6.1], fov: 30, handheld: 0.8, under: 1 },
-  { t: 222, pos: [32.0, 8.5, 14.0], target: [26.3, 2.4, 6.2], fov: 32, handheld: 0.7, under: 1 },
-  { t: 232, pos: [33.0, 2.0, 15.0], target: [26.4, -6.4, 6.3], fov: 32, handheld: 0.6, under: 1 },
+  { t: 222, pos: [32.0, 8.5, 14.0], target: [26.3, 0.8, 6.2], fov: 32, handheld: 0.7, under: 1 },
+  { t: 232, pos: [33.0, 2.0, 15.0], target: [26.4, -8.2, 6.3], fov: 32, handheld: 0.6, under: 1 },
   { t: 240, pos: [31.0, -4.0, 13.0], target: [26.8, -10.4, 6.5], fov: 30, handheld: 0.7, under: 1 },
 
   // 本部侵攻 — 隔壁
