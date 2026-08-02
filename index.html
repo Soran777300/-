@@ -3,30 +3,71 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ヤシマ作戦 — 3D 俯瞰 作戦記録 / OPERATION YASHIMA</title>
-<meta name="description" content="ヤシマ作戦のテレビ特番級3D俯瞰デモ。箱根カルデラの地形、ネルフ・戦略自衛隊・関係各省庁の軍勢と進軍矢印、滑らかなカメラ移動を NERV UI で再構成。">
+<title>3D Model Data Viewer — MAGI 作戦記録</title>
+<meta name="description" content="MAGI に記録された作戦を 3D 俯瞰で再生するビューア。第10使徒 迎撃戦（ネルフ本部 侵攻）／ヤシマ作戦。">
 <link rel="stylesheet" href="./src/style.css">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23000'/%3E%3Cpath d='M6 26 L16 6 L26 26 Z' fill='%23ff7a1a'/%3E%3C/svg%3E">
-<script type="importmap">
-{
-  "imports": {
-    "three": "./vendor/three/three.module.js",
-    "three/addons/": "./vendor/three/addons/"
-  }
-}
-</script>
 </head>
-<body>
-  <div id="app"></div>
+<body class="viewer-page">
+  <div class="viewer">
+    <header class="v-head">
+      <span id="logo"></span>
+      <div>
+        <div class="jp">特務機関ネルフ</div>
+        <div class="en">NERV — MAGI ARCHIVE / 3D MODEL DATA VIEWER</div>
+      </div>
+      <div class="badge-23d"><span class="b2d">2D</span><span class="b3d">3D</span></div>
+    </header>
 
-  <div id="loading">MAGI — LOADING TERRAIN DATA …</div>
+    <h1 class="v-title">
+      Evangelion<br>3D 作戦記録 ビューア
+      <small>VIEWER OF VARIOUS THREE-DIMENSIONAL DATA RECORDED BY THE MAGI.</small>
+    </h1>
 
-  <noscript>
-    <div style="padding:40px;color:#ff7a1a;font-family:sans-serif">
-      このデモの再生には JavaScript と WebGL2 が必要です。
+    <a class="v-card hatch" href="./zeruel.html">
+      <span class="corner-tag ct-tl">Menu 2-36</span>
+      <span class="corner-tag ct-tr">NERV ONLY</span>
+      <span class="corner-tag ct-br">Code No.1670055</span>
+      <div class="v-no">A-02</div>
+      <div class="v-name">第10使徒 迎撃戦</div>
+      <div class="v-sub">ネルフ本部 侵攻 — 装甲板 突破から初号機の覚醒まで</div>
+      <div class="v-en">THE 10TH ANGEL "ZERUEL" — ASSAULT ON NERV HQ</div>
+      <div class="v-meta">
+        <span>全13章 / 6分16秒</span>
+        <span>箱根カルデラ + ジオフロント断面</span>
+        <span>ネルフ / 戦略自衛隊 / 国連軍 / 関係各省庁</span>
+      </div>
+    </a>
+
+    <a class="v-card hatch" href="./yashima.html">
+      <span class="corner-tag ct-tl">Menu 2-35</span>
+      <span class="corner-tag ct-tr">NERV ONLY</span>
+      <span class="corner-tag ct-br">Code No.1670054</span>
+      <div class="v-no">A-01</div>
+      <div class="v-name">ヤシマ作戦</div>
+      <div class="v-sub">第5使徒 ラミエル 迎撃 — 全国送電から第二射まで</div>
+      <div class="v-en">OPERATION YASHIMA — 5TH ANGEL INTERCEPTION</div>
+      <div class="v-meta">
+        <span>全9章 / 4分06秒</span>
+        <span>箱根カルデラ</span>
+        <span>ネルフ / 戦略自衛隊 / 関係各省庁</span>
+      </div>
+    </a>
+
+    <div class="v-foot">
+      <span class="jp">MAGI 記録データ 再生</span>
+      <span class="en">WEBGL2 REQUIRED — LANDSCAPE RECOMMENDED ON MOBILE</span>
     </div>
-  </noscript>
 
-  <script type="module" src="./src/main.js"></script>
+    <p class="v-note">
+      『新世紀エヴァンゲリオン』および関連意匠の権利は権利者に帰属します。
+      本サイトはファンによる非商用の技術デモであり、公式の資料でも、権利者による許諾を受けたものでもありません。
+    </p>
+  </div>
+
+  <script type="module">
+    import { nervLogo } from './src/ui/logo.js';
+    document.getElementById('logo').innerHTML = nervLogo({ size: 62, color: 'var(--orange)' });
+  </script>
 </body>
 </html>

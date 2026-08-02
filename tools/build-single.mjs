@@ -1,4 +1,4 @@
-// 単一 HTML ファイル版 (dist/yashima.html) を生成する。
+// 単一 HTML ファイル版 (dist/*.html) を生成する。
 //
 //   npx esbuild@0.24 --version >/dev/null   # 初回のみ取得
 //   node tools/build-single.mjs
@@ -12,32 +12,47 @@ import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const out = resolve(root, 'dist/yashima.html');
 
-const bundled = await build({
-  entryPoints: [resolve(root, 'src/main.js')],
-  bundle: true,
-  format: 'esm',
-  target: 'es2020',
-  minify: true,
-  write: false,
-  alias: {
-    // importmap と同じ解決を esbuild にも与える
-    'three/addons': resolve(root, 'vendor/three/addons'),
-    three: resolve(root, 'vendor/three/three.module.js'),
+const TARGETS = [
+  {
+    entry: 'src/main-zeruel.js',
+    out: 'dist/zeruel.html',
+    title: '第10使徒 迎撃戦 — ネルフ本部 侵攻 / 3D 俯瞰 作戦記録',
   },
-});
+  {
+    entry: 'src/main.js',
+    out: 'dist/yashima.html',
+    title: 'ヤシマ作戦 — 3D 俯瞰 作戦記録 / OPERATION YASHIMA',
+  },
+];
 
 const css = await readFile(resolve(root, 'src/style.css'), 'utf8');
-// インラインスクリプト中の </script はパーサに拾われるため退避する
-const js = bundled.outputFiles[0].text.replace(/<\/script/gi, '<\\/script');
+await mkdir(resolve(root, 'dist'), { recursive: true });
 
-const html = `<!DOCTYPE html>
+for (const t of TARGETS) {
+  const bundled = await build({
+    entryPoints: [resolve(root, t.entry)],
+    bundle: true,
+    format: 'esm',
+    target: 'es2020',
+    minify: true,
+    write: false,
+    alias: {
+      // importmap と同じ解決を esbuild にも与える
+      'three/addons': resolve(root, 'vendor/three/addons'),
+      three: resolve(root, 'vendor/three/three.module.js'),
+    },
+  });
+
+  // インラインスクリプト中の </script はパーサに拾われるため退避する
+  const js = bundled.outputFiles[0].text.replace(/<\/script/gi, '<\\/script');
+
+  const html = `<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ヤシマ作戦 — 3D 俯瞰 作戦記録 / OPERATION YASHIMA</title>
+<title>${t.title}</title>
 <style>
 ${css}
 </style>
@@ -52,6 +67,6 @@ ${js}
 </html>
 `;
 
-await mkdir(resolve(root, 'dist'), { recursive: true });
-await writeFile(out, html);
-console.log(`dist/yashima.html — ${(html.length / 1024).toFixed(0)} KB`);
+  await writeFile(resolve(root, t.out), html);
+  console.log(`${t.out} — ${(html.length / 1024).toFixed(0)} KB`);
+}

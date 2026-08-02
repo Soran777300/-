@@ -7,7 +7,9 @@ export const FACTION = {
   NERV: { color: 0xff7a1a, tag: 'NERV' },
   EVA: { color: 0xb388ff, tag: 'EVANGELION' },
   EVA00: { color: 0x5cc8ff, tag: 'EVANGELION' },
+  EVA02: { color: 0xff6a4a, tag: 'EVANGELION' },
   JSSDF: { color: 0x48e08a, tag: 'JSSDF' },
+  UN: { color: 0x8fb8ff, tag: 'UN FORCES' },
   MINISTRY: { color: 0x2fd8ff, tag: 'GOV' },
   LOGISTICS: { color: 0xffd166, tag: 'LOGISTICS' },
   ANGEL: { color: 0xff2d55, tag: 'ANGEL' },
@@ -138,6 +140,7 @@ void main() {
  * @param {keyof FACTION} o.faction
  * @param {number} [o.height]  銘板の高さ (world unit)
  * @param {number} [o.ring]    接地リング半径
+ * @param {number} [o.y]       設置高さを直接指定 (地下構造物用)
  */
 export function createMarker(o) {
   const f = FACTION[o.faction] || FACTION.NERV;
@@ -145,7 +148,8 @@ export function createMarker(o) {
   const group = new THREE.Group();
   group.name = 'marker:' + o.code;
 
-  const gy = surfaceY(o.pos.x, o.pos.z);
+  const fixedY = o.y != null;
+  const gy = fixedY ? o.y : surfaceY(o.pos.x, o.pos.z);
   const ringR = o.ring ?? 2.2;
   const labelH = o.height ?? 8;
 
@@ -193,7 +197,7 @@ export function createMarker(o) {
   // 大きなリングの中心に銘板を立てると他の表示と重なるため、
   // 引出線ごと水平にずらせるようにする。
   const off = o.labelOffset || [0, 0];
-  const offY = surfaceY(o.pos.x + off[0], o.pos.z + off[1]) - gy;
+  const offY = fixedY ? 0 : surfaceY(o.pos.x + off[0], o.pos.z + off[1]) - gy;
   const stalk = new THREE.Group();
   stalk.position.set(off[0], offY, off[1]);
   group.add(stalk);

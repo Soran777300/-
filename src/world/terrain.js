@@ -32,6 +32,9 @@ uniform float uReveal;       // 0..1 地形の展開アニメ
 uniform float uMapHalf;
 uniform vec3  uFocus;        // 注目地点 (ハイライト)
 uniform float uFocusRadius;
+uniform vec3  uCutCenter;    // 断面表示の中心 (ジオフロント直上)
+uniform float uCutRadius;
+uniform float uCutAmount;    // 0..1 地表を透過させて地下を見せる
 
 varying vec3 vPos;
 varying vec3 vNrm;
@@ -113,6 +116,17 @@ void main() {
   col = mix(col, uFogColor, smoothstep(0.72, 1.25, depth) * 0.85);
 
   float alpha = rev * (1.0 - smoothstep(0.94, 1.22, depth));
+
+  // --- 断面表示 (地表を抜いて地下構造を見せる) --------------------------------
+  if (uCutAmount > 0.001) {
+    float cd = length(vPos.xz - uCutCenter.xz);
+    float hole = 1.0 - smoothstep(uCutRadius * 0.72, uCutRadius, cd);
+    // 開口の縁を発光させ、切断面であることを示す
+    float lip = exp(-pow((cd - uCutRadius * 0.86) / (uCutRadius * 0.10), 2.0));
+    col += vec3(1.0, 0.48, 0.10) * lip * uCutAmount * 1.1;
+    alpha *= 1.0 - uCutAmount * hole * 0.97;
+  }
+
   if (alpha < 0.004) discard;
 
   gl_FragColor = vec4(col, alpha);
@@ -149,6 +163,9 @@ export function createTerrain(segments = TERRAIN_SEG) {
     uMapHalf: { value: MAP_HALF },
     uFocus: { value: new THREE.Vector3(0, 0, 0) },
     uFocusRadius: { value: 0 },
+    uCutCenter: { value: new THREE.Vector3(0, 0, 0) },
+    uCutRadius: { value: 14 },
+    uCutAmount: { value: 0 },
   };
 
   const mat = new THREE.ShaderMaterial({

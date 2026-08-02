@@ -394,58 +394,116 @@ const EVA_HEIGHT_U = 0.40; // 40 m
 const EVA_COLORS = {
   '01': { body: 0x6b41ad, armor: 0x35bb64, trim: 0xf4a227, eye: 0xffe38a },
   '00': { body: 0x4283cf, armor: 0xd6e6f4, trim: 0xf4a227, eye: 0xff5a3c },
+  '02': { body: 0xc02b22, armor: 0xe8552f, trim: 0xf4c027, eye: 0x7ef0ff },
 };
 
+// --- 姿勢 -------------------------------------------------------------------
+// 各関節の [x, y, z] 回転 (rad)。hipsY は腰の高さ。
+// 片膝立ち系は「腰高 / 膝接地 / 足裏接地」から逆算した値で、脚が地面から
+// 浮かないようにしてある。
+
+export const POSES = {
+  /** 射撃姿勢 — 陽電子砲を右肩で保持 (ヤシマ作戦 初号機) */
+  kneelFire: {
+    hipsY: 0.25, hips: [0.08, 0, 0], chest: [0.06, 0, 0], head: [-0.04, 0, 0],
+    shoulderR: [-0.55, 0, -0.12], elbowR: [1.15, 0, 0],
+    shoulderL: [-1.28, 0, 0.46], elbowL: [0.78, 0, 0],
+    hipL: [-1.615, 0, 0], kneeL: [1.615, 0, 0], hipR: [0.30, 0, 0], kneeR: [1.135, 0, 0],
+  },
+  /** 盾構え姿勢 — 特殊装甲板を前面に立てる (ヤシマ作戦 零号機) */
+  shield: {
+    hipsY: 0.25, hips: [0.08, 0, 0], chest: [0.20, 0, 0], head: [0.12, 0, 0],
+    shoulderR: [-1.30, 0, -0.34], elbowR: [0.98, 0, 0],
+    shoulderL: [-1.30, 0, 0.34], elbowL: [0.98, 0, 0],
+    hipL: [-1.615, 0, 0], kneeL: [1.615, 0, 0], hipR: [0.30, 0, 0], kneeR: [1.135, 0, 0],
+  },
+  /** 直立待機 */
+  stand: {
+    hipsY: 0.53, hips: [0, 0, 0], chest: [0.02, 0, 0], head: [0, 0, 0],
+    shoulderR: [0.05, 0, 0.09], elbowR: [0.14, 0, 0],
+    shoulderL: [0.05, 0, -0.09], elbowL: [0.14, 0, 0],
+    hipL: [-0.03, 0, 0], kneeL: [0.06, 0, 0], hipR: [0.03, 0, 0], kneeR: [0.06, 0, 0],
+  },
+  /** 戦闘構え — 半身、両腕を前に */
+  guard: {
+    hipsY: 0.495, hips: [0.05, 0.16, 0], chest: [0.10, -0.10, 0], head: [-0.05, 0.06, 0],
+    shoulderR: [-0.62, 0, -0.30], elbowR: [1.18, 0, 0],
+    shoulderL: [-0.50, 0, 0.26], elbowL: [1.05, 0, 0],
+    hipL: [-0.34, 0, 0], kneeL: [0.56, 0, 0], hipR: [0.22, 0, 0], kneeR: [0.42, 0, 0],
+  },
+  /** 射撃 — 兵装を両手で前方保持 */
+  aim: {
+    hipsY: 0.505, hips: [0.04, 0.22, 0], chest: [0.06, -0.14, 0], head: [-0.02, 0.10, 0],
+    shoulderR: [-1.10, 0, -0.18], elbowR: [0.72, 0, 0],
+    shoulderL: [-1.32, 0, 0.42], elbowL: [0.80, 0, 0],
+    hipL: [-0.28, 0, 0], kneeL: [0.46, 0, 0], hipR: [0.20, 0, 0], kneeR: [0.34, 0, 0],
+  },
+  /** 斬撃 — 右腕を振りかぶる */
+  slash: {
+    hipsY: 0.50, hips: [0.10, -0.30, 0], chest: [-0.12, 0.34, 0], head: [-0.10, 0.20, 0],
+    shoulderR: [-2.35, 0, -0.30], elbowR: [0.34, 0, 0],
+    shoulderL: [-0.70, 0, 0.50], elbowL: [1.30, 0, 0],
+    hipL: [-0.45, 0, 0], kneeL: [0.70, 0, 0], hipR: [0.30, 0, 0], kneeR: [0.50, 0, 0],
+  },
+  /** 突進 — 前傾、腕を後方へ */
+  charge: {
+    hipsY: 0.46, hips: [0.42, 0, 0], chest: [0.12, 0, 0], head: [-0.42, 0, 0],
+    shoulderR: [0.85, 0, -0.16], elbowR: [0.55, 0, 0],
+    shoulderL: [0.85, 0, 0.16], elbowL: [0.55, 0, 0],
+    hipL: [-0.75, 0, 0], kneeL: [0.95, 0, 0], hipR: [0.55, 0, 0], kneeR: [0.75, 0, 0],
+  },
+  /** 被弾・大破 — 前のめりに崩れる */
+  fallen: {
+    hipsY: 0.19, hips: [0.62, 0.12, 0], chest: [0.46, 0, 0.10], head: [0.52, 0, 0],
+    shoulderR: [0.30, 0, -0.40], elbowR: [0.30, 0, 0],
+    shoulderL: [0.36, 0, 0.44], elbowL: [0.22, 0, 0],
+    hipL: [-1.35, 0, 0], kneeL: [1.90, 0, 0], hipR: [0.42, 0, 0], kneeR: [1.25, 0, 0],
+  },
+  /** 活動停止 — 直立のまま脱力 */
+  shutdown: {
+    hipsY: 0.44, hips: [0.20, 0, 0], chest: [0.26, 0, 0], head: [0.42, 0, 0],
+    shoulderR: [0.22, 0, 0.05], elbowR: [0.30, 0, 0],
+    shoulderL: [0.22, 0, -0.05], elbowL: [0.30, 0, 0],
+    hipL: [-0.32, 0, 0], kneeL: [0.62, 0, 0], hipR: [-0.20, 0, 0], kneeR: [0.50, 0, 0],
+  },
+  /** 覚醒・咆哮 — 上体を反らし両腕を広げる */
+  berserk: {
+    hipsY: 0.50, hips: [-0.20, 0, 0], chest: [-0.34, 0, 0], head: [-0.46, 0, 0],
+    shoulderR: [-1.05, 0, -0.62], elbowR: [0.42, 0, 0],
+    shoulderL: [-1.05, 0, 0.62], elbowL: [0.42, 0, 0],
+    hipL: [-0.30, 0, 0], kneeL: [0.42, 0, 0], hipR: [0.30, 0, 0], kneeR: [0.42, 0, 0],
+  },
+  /** 捕食 — 両腕で掴み、上体を前へ */
+  devour: {
+    hipsY: 0.47, hips: [0.30, 0, 0], chest: [0.16, 0, 0], head: [-0.18, 0, 0],
+    shoulderR: [-1.75, 0, -0.30], elbowR: [0.62, 0, 0],
+    shoulderL: [-1.75, 0, 0.30], elbowL: [0.62, 0, 0],
+    hipL: [-0.55, 0, 0], kneeL: [0.80, 0, 0], hipR: [0.35, 0, 0], kneeR: [0.60, 0, 0],
+  },
+};
+
+const JOINT_KEYS = ['hips', 'chest', 'head', 'shoulderR', 'elbowR', 'shoulderL', 'elbowL',
+  'hipL', 'kneeL', 'hipR', 'kneeR'];
+
+function applyPose(j, pose, k = 1) {
+  for (const name of JOINT_KEYS) {
+    const target = pose[name] || [0, 0, 0];
+    const r = j[name].rotation;
+    r.x += (target[0] - r.x) * k;
+    r.y += (target[1] - r.y) * k;
+    r.z += (target[2] - r.z) * k;
+  }
+  const hy = pose.hipsY ?? 0.53;
+  j.hips.position.y += (hy - j.hips.position.y) * k;
+}
+
 /**
- * 片膝立ちの下半身。
- * 右膝を接地、左足を前に立てる。角度は「腰高 0.25 / 膝接地 / 足裏接地」から
- * 逆算した値で、脚が地面から浮かないようにしてある。
- */
-function poseKneelBase(j) {
-  j.hips.position.y = 0.25;
-  j.hips.rotation.x = 0.08;
-  // 左脚: 前方に立てる (脛は垂直)
-  j.hipL.rotation.x = -1.615;
-  j.kneeL.rotation.x = 1.615;
-  // 右脚: 膝を接地、脛は後方へ寝かせる
-  j.hipR.rotation.x = 0.30;
-  j.kneeR.rotation.x = 1.135;
-}
-
-/** 射撃姿勢 — 陽電子砲を右肩で保持 */
-function poseKneelingFire(j) {
-  poseKneelBase(j);
-  j.chest.rotation.x = 0.06;
-  j.head.rotation.x = -0.04;
-  // 右腕: 機関部を保持
-  j.shoulderR.rotation.x = -0.55;
-  j.shoulderR.rotation.z = -0.12;
-  j.elbowR.rotation.x = 1.15;
-  // 左腕: 砲身を前方で支持
-  j.shoulderL.rotation.x = -1.28;
-  j.shoulderL.rotation.z = 0.46;
-  j.elbowL.rotation.x = 0.78;
-}
-
-/** 盾構え姿勢 — 特殊装甲板を前面に立てる */
-function poseShield(j) {
-  poseKneelBase(j);
-  j.chest.rotation.x = 0.20;
-  j.head.rotation.x = 0.12;
-  j.shoulderR.rotation.x = -1.30;
-  j.shoulderR.rotation.z = -0.34;
-  j.elbowR.rotation.x = 0.98;
-  j.shoulderL.rotation.x = -1.30;
-  j.shoulderL.rotation.z = 0.34;
-  j.elbowL.rotation.x = 0.98;
-}
-
-/**
- * @param {'01'|'00'} type
+ * @param {'01'|'00'|'02'} type
  * @param {{x:number,y:number,z:number}} pos 足元の位置
  * @param {number} heading 向き (rad, +Z 基準)
+ * @param {string} [pose] 初期姿勢 (POSES のキー)
  */
-export function createEva(type, pos, heading) {
+export function createEva(type, pos, heading, pose) {
   const h = buildHumanoid(EVA_COLORS[type]);
   const g = new THREE.Group();
   g.name = 'eva-' + type;
@@ -454,10 +512,164 @@ export function createEva(type, pos, heading) {
   g.position.set(pos.x, pos.y, pos.z);
   g.rotation.y = heading;
 
-  if (type === '01') poseKneelingFire(h.joints);
-  else poseShield(h.joints);
+  const initial = pose || (type === '01' ? 'kneelFire' : type === '00' ? 'shield' : 'stand');
+  applyPose(h.joints, POSES[initial], 1);
 
-  g.userData = { humanoid: h, height: EVA_HEIGHT_U };
+  let current = initial;
+  let breath = 0;
+
+  g.userData = {
+    humanoid: h,
+    joints: h.joints,
+    height: EVA_HEIGHT_U,
+    /** 姿勢を切り替える (update で補間される) */
+    setPose(name, immediate = false) {
+      if (!POSES[name]) return;
+      current = name;
+      if (immediate) applyPose(h.joints, POSES[name], 1);
+    },
+    get pose() {
+      return current;
+    },
+    /** 目の発光強度 (暴走時に上げる) */
+    setEyeGlow(v) {
+      h.materials.eye.color.setRGB(1, 0.35 + 0.45 * (1 - v), 0.25 + 0.5 * (1 - v));
+    },
+    update(dt, t, rate = 5.5) {
+      applyPose(h.joints, POSES[current], Math.min(1, dt * rate));
+      // 待機時の微細な挙動 — 静止画のように固まらせない
+      breath += dt;
+      const amp = current === 'fallen' || current === 'shutdown' ? 0.12 : 1;
+      h.joints.chest.rotation.x += Math.sin(breath * 1.4) * 0.006 * amp;
+      h.joints.head.rotation.y = Math.sin(breath * 0.7) * 0.05 * amp;
+    },
+  };
+  return g;
+}
+
+/** 暴走オーラ — 機体を包む発光殻 */
+export function createBerserkAura(radius = 0.34) {
+  const mat = new THREE.ShaderMaterial({
+    uniforms: {
+      uTime: { value: 0 },
+      uAmount: { value: 0 },
+      uColor: { value: new THREE.Color(0xff3a1e) },
+      uInner: { value: new THREE.Color(0xb06cff) },
+    },
+    vertexShader: /* glsl */ `
+      varying vec3 vN; varying vec3 vP;
+      void main() {
+        vN = normalize(normalMatrix * normal);
+        vP = position;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: /* glsl */ `
+      precision highp float;
+      uniform float uTime; uniform float uAmount; uniform vec3 uColor; uniform vec3 uInner;
+      varying vec3 vN; varying vec3 vP;
+      void main() {
+        float fres = pow(1.0 - abs(vN.z), 1.6);
+        float flame = 0.5 + 0.5 * sin(vP.y * 26.0 - uTime * 9.0 + sin(vP.x * 18.0) * 2.0);
+        vec3 col = mix(uInner, uColor, flame);
+        float a = uAmount * (fres * 0.75 + 0.25) * (0.45 + 0.55 * flame);
+        gl_FragColor = vec4(col * (1.0 + flame * 0.8), a * 0.45);
+      }
+    `,
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    side: THREE.BackSide,
+  });
+  const mesh = new THREE.Mesh(new THREE.IcosahedronGeometry(radius, 2), mat);
+  mesh.visible = false;
+  mesh.renderOrder = 24;
+  const light = new THREE.PointLight(0xff5a2a, 0, 26, 2);
+  mesh.add(light);
+  mesh.userData = {
+    setAmount(v) {
+      mat.uniforms.uAmount.value = v;
+      mesh.visible = v > 0.01;
+      light.intensity = v * 60;
+      mesh.scale.setScalar(1 + v * 0.12);
+    },
+    update(dt, t) {
+      mat.uniforms.uTime.value = t;
+    },
+  };
+  return mesh;
+}
+
+// --- 兵装 -------------------------------------------------------------------
+
+/** パレットライフル (全長 約 20 m) */
+export function createPalletRifle() {
+  const g = new THREE.Group();
+  const body = new THREE.MeshStandardMaterial({ color: 0x6f7681, roughness: 0.5, metalness: 0.5 });
+  const dark = new THREE.MeshStandardMaterial({ color: 0x2c3138, roughness: 0.7, metalness: 0.3 });
+
+  const barrel = new THREE.Mesh(new THREE.BoxGeometry(0.026, 0.030, 0.150), body);
+  barrel.position.z = 0.055;
+  g.add(barrel);
+  const receiver = new THREE.Mesh(new THREE.BoxGeometry(0.042, 0.052, 0.090), dark);
+  receiver.position.z = -0.030;
+  g.add(receiver);
+  const mag = new THREE.Mesh(new THREE.BoxGeometry(0.034, 0.058, 0.036), dark);
+  mag.position.set(0, -0.048, -0.028);
+  g.add(mag);
+  const muzzle = new THREE.Object3D();
+  muzzle.position.z = 0.132;
+  g.add(muzzle);
+  g.userData = { muzzle };
+  return g;
+}
+
+/** プログレッシブナイフ (全長 約 8 m) */
+export function createProgKnife() {
+  const g = new THREE.Group();
+  const blade = new THREE.Mesh(
+    new THREE.BoxGeometry(0.014, 0.004, 0.062),
+    new THREE.MeshStandardMaterial({ color: 0xdfe6ef, roughness: 0.22, metalness: 0.9 })
+  );
+  blade.position.z = 0.036;
+  g.add(blade);
+  const edge = new THREE.Mesh(
+    new THREE.BoxGeometry(0.004, 0.0055, 0.064),
+    new THREE.MeshBasicMaterial({ color: 0x9fe8ff, transparent: true, opacity: 0.9 })
+  );
+  edge.position.set(0.006, 0, 0.036);
+  g.add(edge);
+  const grip = new THREE.Mesh(
+    new THREE.BoxGeometry(0.012, 0.012, 0.020),
+    new THREE.MeshStandardMaterial({ color: 0x353a42, roughness: 0.8 })
+  );
+  g.add(grip);
+  g.userData = { edge };
+  return g;
+}
+
+/** N2 地雷 (直径 約 12 m の弾体) */
+export function createN2Mine() {
+  const g = new THREE.Group();
+  const shell = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.06, 0.06, 0.13, 16),
+    new THREE.MeshStandardMaterial({ color: 0x9aa2ad, roughness: 0.45, metalness: 0.6 })
+  );
+  g.add(shell);
+  for (const y of [-0.035, 0.035]) {
+    const band = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.063, 0.063, 0.018, 16),
+      new THREE.MeshStandardMaterial({ color: 0xffb01e, roughness: 0.5, metalness: 0.2 })
+    );
+    band.position.y = y;
+    g.add(band);
+  }
+  const cap = new THREE.Mesh(
+    new THREE.ConeGeometry(0.06, 0.05, 16),
+    new THREE.MeshStandardMaterial({ color: 0xc23a24, roughness: 0.5, metalness: 0.4 })
+  );
+  cap.position.y = 0.09;
+  g.add(cap);
   return g;
 }
 
